@@ -17,8 +17,12 @@ register_provider('apt_key2') do
   commands gpg: '/usr/bin/gpg'
 
   def canonicalize(resources)
-    resources.collect do |r|
-      r[:id] = r[:id].upcase
+    resources.each do |r|
+      r[:id] = if r[:id].start_with?('0x')
+                 r[:id][2..-1].upcase
+               else
+                 r[:id].upcase
+               end
     end
   end
 

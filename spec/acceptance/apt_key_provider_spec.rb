@@ -21,7 +21,8 @@ MAX_TIMEOUT_RETRY              = 3
 TIMEOUT_RETRY_WAIT             = 5
 TIMEOUT_ERROR_MATCHER    = /no valid OpenPGP data found/
 
-describe 'apt_key' do
+%w[apt_key apt_key2].each do |typename|
+describe typename do
   before(:each) do
     # Delete twice to make sure everything is cleaned
     # up after the short key collision
@@ -51,7 +52,7 @@ describe 'apt_key' do
       context "#{key}" do
         it 'works' do
           pp = <<-EOS
-          apt_key { 'puppetlabs':
+          #{typename} { 'puppetlabs':
             id     => '#{value}',
             ensure => 'present',
           }
@@ -67,7 +68,7 @@ describe 'apt_key' do
     context 'invalid length key id' do
       it 'fails' do
         pp = <<-EOS
-        apt_key { 'puppetlabs':
+        #{typename} { 'puppetlabs':
           id => '8280EF8D349F',
         }
         EOS
@@ -83,7 +84,7 @@ describe 'apt_key' do
     context 'absent' do
       it 'is removed' do
         pp = <<-EOS
-        apt_key { 'centos':
+        #{typename} { 'centos':
           id     => '#{CENTOS_GPG_KEY_LONG_ID}',
           ensure => 'absent',
         }
@@ -114,7 +115,7 @@ describe 'apt_key' do
     context 'absent, added with long key', :unless => (fact('operatingsystem') == 'Debian' and fact('operatingsystemmajrelease') == '6') do
       it 'is removed' do
         pp = <<-EOS
-        apt_key { 'puppetlabs':
+        #{typename} { 'puppetlabs':
           id     => '#{PUPPETLABS_GPG_KEY_LONG_ID}',
           ensure => 'absent',
         }
@@ -142,7 +143,7 @@ describe 'apt_key' do
     context 'puppetlabs gpg key' do
       it 'works' do
         pp = <<-EOS
-          apt_key { 'puppetlabs':
+          #{typename} { 'puppetlabs':
             id      => '#{PUPPETLABS_GPG_KEY_FINGERPRINT}',
             ensure  => 'present',
             content => "-----BEGIN PGP PUBLIC KEY BLOCK-----
@@ -214,7 +215,7 @@ zGioYMWgVePywFGaTV51/0uF9ymHHC7BDIcLgUWHdg/1B67jR5YQfzPJUqLhnylt
     context 'multiple keys' do
       it 'runs without errors' do
         pp = <<-EOS
-          apt_key { 'puppetlabs':
+          #{typename} { 'puppetlabs':
             id      => '#{PUPPETLABS_GPG_KEY_FINGERPRINT}',
             ensure  => 'present',
             content => "-----BEGIN PGP PUBLIC KEY BLOCK-----
@@ -475,7 +476,7 @@ FPfZDNCu/TXoqyJk7434jJrcHgPryzrHFBLfEmc=
     context 'bogus key' do
       it 'fails' do
         pp = <<-EOS
-        apt_key { 'puppetlabs':
+        #{typename} { 'puppetlabs':
           id      => '#{PUPPETLABS_GPG_KEY_LONG_ID}',
           ensure  => 'present',
           content => 'For posterity: such content, much bogus, wow',
@@ -493,7 +494,7 @@ FPfZDNCu/TXoqyJk7434jJrcHgPryzrHFBLfEmc=
     context 'hkps.pool.sks-keyservers.net' do
       it 'works' do
         pp = <<-EOS
-        apt_key { 'puppetlabs':
+        #{typename} { 'puppetlabs':
           id     => '#{PUPPETLABS_GPG_KEY_LONG_ID}',
           ensure => 'present',
           server => 'hkps.pool.sks-keyservers.net',
@@ -513,7 +514,7 @@ FPfZDNCu/TXoqyJk7434jJrcHgPryzrHFBLfEmc=
     context 'hkp://hkps.pool.sks-keyservers.net:80' do
       it 'works' do
         pp = <<-EOS
-        apt_key { 'puppetlabs':
+        #{typename} { 'puppetlabs':
           id     => '#{PUPPETLABS_GPG_KEY_FINGERPRINT}',
           ensure => 'present',
           server => 'hkp://hkps.pool.sks-keyservers.net:80',
@@ -532,7 +533,7 @@ FPfZDNCu/TXoqyJk7434jJrcHgPryzrHFBLfEmc=
     context 'nonexistant.key.server' do
       it 'fails' do
         pp = <<-EOS
-        apt_key { 'puppetlabs':
+        #{typename} { 'puppetlabs':
           id     => '#{PUPPETLABS_GPG_KEY_LONG_ID}',
           ensure => 'present',
           server => 'nonexistant.key.server',
@@ -548,7 +549,7 @@ FPfZDNCu/TXoqyJk7434jJrcHgPryzrHFBLfEmc=
     context 'key server start with dot' do
       it 'fails' do
         pp = <<-EOS
-        apt_key { 'puppetlabs':
+        #{typename} { 'puppetlabs':
           id     => '#{PUPPETLABS_GPG_KEY_LONG_ID}',
           ensure => 'present',
           server => '.pgp.key.server',
@@ -566,7 +567,7 @@ FPfZDNCu/TXoqyJk7434jJrcHgPryzrHFBLfEmc=
     context 'http://' do
       it 'works' do
         pp = <<-EOS
-        apt_key { 'puppetlabs':
+        #{typename} { 'puppetlabs':
           id     => '#{PUPPETLABS_GPG_KEY_LONG_ID}',
           ensure => 'present',
           source => 'http://#{PUPPETLABS_APT_URL}/#{PUPPETLABS_GPG_KEY_FILE}',
@@ -580,7 +581,7 @@ FPfZDNCu/TXoqyJk7434jJrcHgPryzrHFBLfEmc=
 
       it 'works with userinfo' do
         pp = <<-EOS
-        apt_key { 'puppetlabs':
+        #{typename} { 'puppetlabs':
           id     => '#{PUPPETLABS_GPG_KEY_LONG_ID}',
           ensure => 'present',
           source => 'http://dummyuser:dummypassword@#{PUPPETLABS_APT_URL}/#{PUPPETLABS_GPG_KEY_FILE}',
@@ -594,7 +595,7 @@ FPfZDNCu/TXoqyJk7434jJrcHgPryzrHFBLfEmc=
 
       it 'fails with a 404' do
         pp = <<-EOS
-        apt_key { 'puppetlabs':
+        #{typename} { 'puppetlabs':
           id     => '#{PUPPETLABS_GPG_KEY_LONG_ID}',
           ensure => 'present',
           source => 'http://#{PUPPETLABS_APT_URL}/herpderp.gpg',
@@ -608,7 +609,7 @@ FPfZDNCu/TXoqyJk7434jJrcHgPryzrHFBLfEmc=
 
       it 'fails with a socket error' do
         pp = <<-EOS
-        apt_key { 'puppetlabs':
+        #{typename} { 'puppetlabs':
           id     => '#{PUPPETLABS_GPG_KEY_LONG_ID}',
           ensure => 'present',
           source => 'http://apt.puppetlabss.com/herpderp.gpg',
@@ -629,7 +630,7 @@ FPfZDNCu/TXoqyJk7434jJrcHgPryzrHFBLfEmc=
 
       it 'works' do
         pp = <<-EOS
-        apt_key { 'CentOS 6':
+        #{typename} { 'CentOS 6':
           id     => '#{CENTOS_GPG_KEY_LONG_ID}',
           ensure => 'present',
           source => 'ftp://#{CENTOS_REPO_URL}/#{CENTOS_GPG_KEY_FILE}',
@@ -643,7 +644,7 @@ FPfZDNCu/TXoqyJk7434jJrcHgPryzrHFBLfEmc=
 
       it 'fails with a 550' do
         pp = <<-EOS
-        apt_key { 'CentOS 6':
+        #{typename} { 'CentOS 6':
           id     => '#{SHOULD_NEVER_EXIST_ID}',
           ensure => 'present',
           source => 'ftp://#{CENTOS_REPO_URL}/herpderp.gpg',
@@ -657,7 +658,7 @@ FPfZDNCu/TXoqyJk7434jJrcHgPryzrHFBLfEmc=
 
       it 'fails with a socket error' do
         pp = <<-EOS
-        apt_key { 'puppetlabs':
+        #{typename} { 'puppetlabs':
           id     => '#{PUPPETLABS_GPG_KEY_LONG_ID}',
           ensure => 'present',
           source => 'ftp://apt.puppetlabss.com/herpderp.gpg',
@@ -673,7 +674,7 @@ FPfZDNCu/TXoqyJk7434jJrcHgPryzrHFBLfEmc=
     context 'https://' do
       it 'works' do
         pp = <<-EOS
-        apt_key { 'puppetlabs':
+        #{typename} { 'puppetlabs':
           id     => '#{PUPPETLABS_GPG_KEY_LONG_ID}',
           ensure => 'present',
           source => 'https://#{PUPPETLABS_APT_URL}/#{PUPPETLABS_GPG_KEY_FILE}',
@@ -687,7 +688,7 @@ FPfZDNCu/TXoqyJk7434jJrcHgPryzrHFBLfEmc=
 
       it 'works with userinfo' do
         pp = <<-EOS
-        apt_key { 'puppetlabs':
+        #{typename} { 'puppetlabs':
           id     => '#{PUPPETLABS_GPG_KEY_LONG_ID}',
           ensure => 'present',
           source => 'https://dummyuser:dummypassword@#{PUPPETLABS_APT_URL}/#{PUPPETLABS_GPG_KEY_FILE}',
@@ -701,7 +702,7 @@ FPfZDNCu/TXoqyJk7434jJrcHgPryzrHFBLfEmc=
 
       it 'fails with a 404' do
         pp = <<-EOS
-        apt_key { 'puppetlabs':
+        #{typename} { 'puppetlabs':
           id     => '#{SHOULD_NEVER_EXIST_ID}',
           ensure => 'present',
           source => 'https://#{PUPPETLABS_APT_URL}/herpderp.gpg',
@@ -715,7 +716,7 @@ FPfZDNCu/TXoqyJk7434jJrcHgPryzrHFBLfEmc=
 
       it 'fails with a socket error' do
         pp = <<-EOS
-        apt_key { 'puppetlabs':
+        #{typename} { 'puppetlabs':
           id     => '#{SHOULD_NEVER_EXIST_ID}',
           ensure => 'present',
           source => 'https://apt.puppetlabss.com/herpderp.gpg',
@@ -740,7 +741,7 @@ FPfZDNCu/TXoqyJk7434jJrcHgPryzrHFBLfEmc=
 
       it 'works' do
         pp = <<-EOS
-        apt_key { 'puppetlabs':
+        #{typename} { 'puppetlabs':
           id     => 'EF8D349F',
           ensure => 'present',
           source => '/tmp/puppetlabs-pubkey.gpg',
@@ -756,7 +757,7 @@ FPfZDNCu/TXoqyJk7434jJrcHgPryzrHFBLfEmc=
     context '/path/that/does/not/exist' do
       it 'fails' do
         pp = <<-EOS
-        apt_key { 'puppetlabs':
+        #{typename} { 'puppetlabs':
           id     => '#{PUPPETLABS_GPG_KEY_LONG_ID}',
           ensure => 'present',
           source => '/tmp/totally_bogus.file',
@@ -779,7 +780,7 @@ FPfZDNCu/TXoqyJk7434jJrcHgPryzrHFBLfEmc=
       end
       it 'fails' do
         pp = <<-EOS
-        apt_key { 'puppetlabs':
+        #{typename} { 'puppetlabs':
           id     => '#{PUPPETLABS_GPG_KEY_LONG_ID}',
           ensure => 'present',
           source => '/tmp/fake-key.gpg',
@@ -797,7 +798,7 @@ FPfZDNCu/TXoqyJk7434jJrcHgPryzrHFBLfEmc=
     context 'debug' do
       it 'works' do
         pp = <<-EOS
-        apt_key { 'puppetlabs':
+        #{typename} { 'puppetlabs':
           id      => '#{PUPPETLABS_GPG_KEY_LONG_ID}',
           ensure  => 'present',
           options => 'debug',
@@ -815,7 +816,7 @@ FPfZDNCu/TXoqyJk7434jJrcHgPryzrHFBLfEmc=
     context 'fingerprint in id matches fingerprint from remote key' do
       it 'works' do
         pp = <<-EOS
-        apt_key { 'puppetlabs':
+        #{typename} { 'puppetlabs':
           id      => '#{PUPPETLABS_GPG_KEY_FINGERPRINT}',
           ensure  => 'present',
           source  => 'https://#{PUPPETLABS_APT_URL}/#{PUPPETLABS_GPG_KEY_FILE}',
@@ -830,7 +831,7 @@ FPfZDNCu/TXoqyJk7434jJrcHgPryzrHFBLfEmc=
     context 'fingerprint in id does NOT match fingerprint from remote key' do
       it 'works' do
         pp = <<-EOS
-        apt_key { 'puppetlabs':
+        #{} { 'puppetlabs':
           id      => '6F6B15509CF8E59E6E469F327F438280EF8D9999',
           ensure  => 'present',
           source  => 'https://#{PUPPETLABS_APT_URL}/#{PUPPETLABS_GPG_KEY_FILE}',
@@ -844,4 +845,5 @@ FPfZDNCu/TXoqyJk7434jJrcHgPryzrHFBLfEmc=
     end
   end
 
+end
 end

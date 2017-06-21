@@ -1,5 +1,4 @@
 require 'pathname'
-require 'pry'
 
 module Puppet::SimpleResource
   class TypeShim
@@ -51,6 +50,15 @@ def register_type(definition)
     @docs = definition[:docs]
     has_namevar = false
     namevar_name = nil
+
+    def initialize(attributes)
+      $stderr.puts "A: #{attributes.inspect}"
+      attributes = attributes.to_hash if attributes.is_a? Puppet::Resource
+      $stderr.puts "B: #{attributes.inspect}"
+      attributes = self.class.canonicalize([attributes])[0]
+      $stderr.puts "C: #{attributes.inspect}"
+      super(attributes)
+    end
 
     definition[:attributes].each do |name, options|
       # puts "#{name}: #{options.inspect}"
