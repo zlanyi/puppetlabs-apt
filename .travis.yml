@@ -10,19 +10,13 @@ before_install:
 matrix:
   fast_finish: true
   include:
-  - rvm: 2.3.1
-    dist: trusty
-    env: PUPPET_INSTALL_TYPE=agent BEAKER_debug=true BEAKER_set=docker/ubuntu-14.04
-    script: bundle exec rake beaker
-    services: docker
-    sudo: required
-  - rvm: 2.3.1
+  - rvm: 2.4.1
     dist: trusty
     env: PUPPET_INSTALL_TYPE=agent BEAKER_debug=true BEAKER_set=docker/debian-8
     script: bundle exec rake beaker
     services: docker
     sudo: required
-  - rvm: 2.4.0
+  - rvm: 2.4.1
     bundler_args: --without system_tests
     env: PUPPET_GEM_VERSION="~> 5.0"
   - rvm: 2.1.9
