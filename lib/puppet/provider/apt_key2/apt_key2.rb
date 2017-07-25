@@ -28,18 +28,22 @@ register_provider('apt_key2') do
 
   def get(names = [])
     cli_args   = %w(adv --list-keys --with-colons --fingerprint --fixed-list-mode)
-    key_output = apt_key(cli_args).encode('UTF-8', 'binary', :invalid => :replace, :undef => :replace, :replace => '')
+    key_output = apt_key_lines(*cli_args)
     pub_line   = nil
     fpr_line   = nil
 
-    result = key_output.split("\n").collect do |line|
+    result = key_output.collect do |line|
+      line = line.encode('UTF-8', 'binary', :invalid => :replace, :undef => :replace, :replace => '')
       if line.start_with?('pub')
         pub_line = line
       elsif line.start_with?('fpr')
         fpr_line = line
       end
+      # puts "debug: parsing #{line}; fpr: #{fpr_line.inspect}; pub: #{pub_line.inspect}"
 
       next unless (pub_line and fpr_line)
+
+      # puts "debug: key_line_to_hash"
 
       hash = key_line_to_hash(pub_line, fpr_line)
 

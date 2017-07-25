@@ -38,9 +38,7 @@ module Puppet::SimpleResource
     end
 
     def to_manifest
-      [
-          "apt_key { #{values[:name].inspect}: ",
-      ] + values.keys.select { |k| k != :name }.collect { |k| "  #{k} => #{values[k].inspect}," } + ['}']
+      (["apt_key { #{values[:name].inspect}: "] + values.keys.select { |k| k != :name }.collect { |k| "  #{k} => #{values[k].inspect}," } + ['}']).join("\n")
     end
   end
 end
@@ -83,7 +81,7 @@ def register_type(definition)
         end
 
         if options[:namevar]
-          # puts 'setting namevar'
+          puts 'setting namevar'
           isnamevar
           has_namevar = true
           namevar_name = name
@@ -166,15 +164,17 @@ def register_type(definition)
       end
     end
 
-    def self.instances
+    define_singleton_method(:instances) do
       puts 'instances'
       # klass = Puppet::Type.type(:api)
+      # force autoloading of the provider
+      autoloaded_provider = provider(name)
       get.collect do |resource_hash|
         Puppet::SimpleResource::TypeShim.new(resource_hash[namevar_name], resource_hash)
       end
     end
 
-    def retrieve
+    define_method(:retrieve) do
       puts 'retrieve'
       result        = Puppet::Resource.new(self.class, title)
       current_state = self.class.get.find { |h| h[namevar_name] == title }
@@ -203,7 +203,29 @@ def register_type(definition)
     end
 
     def self.commands(*args)
-      puts "registering command: #{args.inspect}"
+      args.each do |command_group|
+        command_group.each do |command_name, command|
+          puts "registering command: #{command_name}, using #{command}"
+          define_singleton_method(command_name) do |*args|
+            puts "spawn([#{command.to_s}, #{command.to_s}], #{args.inspect})"
+            # TODO: capture output to debug stream
+            p = Process.spawn([command, command], *args)
+            Process.wait(p)
+            unless $?.exitstatus == 0
+              raise Puppet::ResourceError, "#{command} failed with exit code #{$?.exitstatus}"
+            end
+          end
+
+          define_singleton_method("#{command_name}_lines") do |*args|
+            puts "capture3([#{command.to_s}, #{command.to_s}], #{args.inspect})"
+            stdin_str, stderr_str, status = Open3.capture3([command, command], *args)
+            unless status.exitstatus == 0
+              raise Puppet::ResourceError, "#{command} failed with exit code #{$?.exitstatus}"
+            end
+            stdin_str.split("\n")
+          end
+        end
+      end
     end
   end
 end
@@ -211,4 +233,5 @@ end
 def register_provider(typename, &block)
   type = Puppet::Type.type(typename.to_sym)
   type.instance_eval &block
+  # require'pry';binding.pry
 end
