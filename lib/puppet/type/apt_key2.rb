@@ -38,7 +38,7 @@ register_type({
             type:    'Pattern[/\A((hkp|http|https):\/\/)?([a-z\d])([a-z\d-]{0,61}\.)+[a-z\d]+(:\d{2,5})?$/]',
             docs:    'The key server to fetch the key from based on the ID. It can either be a domain name or url.',
             kind:    :read_only,
-            default: 'keyserver.ubuntu.com',
+            default: :'keyserver.ubuntu.com',
         },
         options:     {
             type: 'Optional[String]',
