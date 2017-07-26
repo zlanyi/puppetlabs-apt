@@ -109,7 +109,7 @@ register_provider('apt_key2') do
           end while r.exitstatus == 0
         end
       elsif current && resource[:ensure].to_s == 'present'
-        # No updating implemented
+        logger.warning(title, 'No updating implemented')
         # update(key, noop: noop)
       elsif !current && resource[:ensure].to_s == 'present'
         create(title, resource, noop: noop)

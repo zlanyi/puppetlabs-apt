@@ -43,6 +43,26 @@ module Puppet::SimpleResource
   end
 end
 
+class Logger
+  def initialize(typename)
+    @typename = typename
+  end
+  [:debug, :info, :notice, :warning, :err, :critical, :alert, :emerg].each do |method|
+    define_method(method) do |*args|
+      if args.length == 1
+        puts "#{method}: #{@typename}: #{args.last}"
+      elsif args.length == 2
+        titles = args.first
+        titles = [titles].flatten.compact
+        resources = titles.collect { |t| "#{@typename}[#{t}]" }.join(", ")
+        puts "#{method}: #{resources}: #{args.last}"
+      else
+        puts "#{method}: #{args.map(&inspect).join(", ")}"
+      end
+    end
+  end
+end
+
 def register_type(definition)
   Puppet::Type.newtype(definition[:name].to_sym) do
     @docs = definition[:docs]
@@ -64,7 +84,7 @@ def register_type(definition)
       # TODO: using newparam everywhere would suppress change reporting
       #       that would allow more fine-grained reporting through logger,
       #       but require more invest in hooking up the infrastructure to emulate existing data
-      param_or_property = if options[:read_only] || options[:namevar]
+      param_or_property = if options[:kind] == :read_only || options[:namevar]
                             :newparam
                           else
                             :newproperty
@@ -157,8 +177,12 @@ def register_type(definition)
                 newvalue v do
                 end
               end
+            when 'Pattern[/\A((hkp|http|https):\/\/)?([a-z\d])([a-z\d-]{0,61}\.)+[a-z\d]+(:\d{2,5})?$/]'
+              newvalues(/\A((hkp|http|https):\/\/)?([a-z\d])([a-z\d-]{0,61}\.)+[a-z\d]+(:\d{2,5})?$/)
             when /^(Enum|Optional|Variant)/
-              fail("#{$1} is not currently supported")
+              fail("Datatype #{$1} is not yet supported in this prototype")
+            else
+              fail("Datatype #{options[:type]} is not yet supported in this prototype")
           end
         end
       end
@@ -187,19 +211,24 @@ def register_type(definition)
         result[:ensure] = :absent
       end
 
+      puts 'retrieve done'
+
       @rapi_current_state = current_state
       result
     end
 
     def flush
       puts 'flush'
-      # binding.pry
-      target_state = self.class.canonicalize([Hash[@parameters.collect { |k, v| [k, v.value] }]])
+      target_state = self.class.canonicalize([Hash[@parameters.collect { |k, v| [k, v.value] }]]).first
       if @rapi_current_state != target_state
         self.class.set({title => @rapi_current_state}, {title => target_state}, false)
       else
         puts 'no changes'
       end
+    end
+
+    define_singleton_method(:logger) do
+      return Logger.new(definition[:name])
     end
 
     def self.commands(*args)

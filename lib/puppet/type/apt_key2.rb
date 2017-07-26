@@ -17,8 +17,9 @@ register_type({
     EOS
     attributes:   {
         ensure:      {
-            type: 'Enum[present, absent]',
-            docs: 'Whether this apt key should be present or absent on the target system.'
+            type:    'Enum[present, absent]',
+            docs:    'Whether this apt key should be present or absent on the target system.',
+            default: 'present',
         },
         id:          {
             type:    'Variant[Pattern[/\A(0x)?[0-9a-fA-F]{8}\Z/], Pattern[/\A(0x)?[0-9a-fA-F]{16}\Z/], Pattern[/\A(0x)?[0-9a-fA-F]{40}\Z/]]',
@@ -36,7 +37,8 @@ register_type({
         server:      {
             type:    'Pattern[/\A((hkp|http|https):\/\/)?([a-z\d])([a-z\d-]{0,61}\.)+[a-z\d]+(:\d{2,5})?$/]',
             docs:    'The key server to fetch the key from based on the ID. It can either be a domain name or url.',
-            default: :'keyserver.ubuntu.com'
+            kind:    :read_only,
+            default: 'keyserver.ubuntu.com',
         },
         options:     {
             type: 'Optional[String]',
