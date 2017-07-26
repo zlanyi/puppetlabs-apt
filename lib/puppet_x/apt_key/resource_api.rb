@@ -84,7 +84,7 @@ def register_type(definition)
       # TODO: using newparam everywhere would suppress change reporting
       #       that would allow more fine-grained reporting through logger,
       #       but require more invest in hooking up the infrastructure to emulate existing data
-      param_or_property = if options[:kind] == :read_only || options[:namevar]
+      param_or_property = if options[:behaviour] == :read_only || options[:behaviour] == :namevar
                             :newparam
                           else
                             :newproperty
@@ -100,7 +100,7 @@ def register_type(definition)
           warn("#{definition[:name]}.#{name} has no docs")
         end
 
-        if options[:namevar]
+        if options[:behaviour] == :namevar
           puts 'setting namevar'
           isnamevar
           has_namevar = true
@@ -108,7 +108,7 @@ def register_type(definition)
         end
 
         # read-only values do not need type checking, but can have default values
-        if not options[:read_only]
+        if options[:behaviour] != :read_only
           # TODO: this should use Pops infrastructure to avoid hardcoding stuff, and enhance type fidelity
           # validate do |v|
           #   type = Puppet::Pops::Types::TypeParser.singleton.parse(options[:type]).normalize

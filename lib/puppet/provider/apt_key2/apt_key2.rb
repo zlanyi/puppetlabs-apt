@@ -4,14 +4,6 @@ require 'open-uri'
 require 'net/ftp'
 require 'tempfile'
 
-if RUBY_VERSION == '1.8.7'
-  # Mothers cry, puppies die and Ruby 1.8.7's open-uri needs to be
-  # monkeypatched to support passing in :ftp_passive_mode.
-  require File.expand_path(File.join(File.dirname(__FILE__), '..', '..', '..',
-                                    'puppet_x', 'apt_key', 'patch_openuri.rb'))
-  OpenURI::Options.merge!({:ftp_active_mode => false,})
-end
-
 register_provider('apt_key2') do
   commands apt_key: 'apt-key'
   commands gpg: '/usr/bin/gpg'
@@ -26,14 +18,14 @@ register_provider('apt_key2') do
     end
   end
 
-  def get(names = [])
-    cli_args   = %w(adv --list-keys --with-colons --fingerprint --fixed-list-mode)
+  def get(_names = [])
+    cli_args   = %w[adv --list-keys --with-colons --fingerprint --fixed-list-mode]
     key_output = apt_key_lines(*cli_args)
     pub_line   = nil
     fpr_line   = nil
 
-    result = key_output.collect do |line|
-      line = line.encode('UTF-8', 'binary', :invalid => :replace, :undef => :replace, :replace => '')
+    result = key_output.map { |line|
+      line = line.encode('UTF-8', 'binary', invalid: :replace, undef: :replace, replace: '')
       if line.start_with?('pub')
         pub_line = line
       elsif line.start_with?('fpr')
@@ -41,7 +33,7 @@ register_provider('apt_key2') do
       end
       # puts "debug: parsing #{line}; fpr: #{fpr_line.inspect}; pub: #{pub_line.inspect}"
 
-      next unless (pub_line and fpr_line)
+      next unless pub_line && fpr_line
 
       # puts "debug: key_line_to_hash"
 
@@ -52,7 +44,7 @@ register_provider('apt_key2') do
       fpr_line = nil
 
       hash
-    end.compact!
+    }.compact!
 
     result
   end
@@ -63,16 +55,16 @@ register_provider('apt_key2') do
 
     # set key type based on types defined in /usr/share/doc/gnupg/DETAILS.gz
     key_type  = case pub_split[3]
-                  when '1'
-                    :rsa
-                  when '17'
-                    :dsa
-                  when '18'
-                    :ecc
-                  when '19'
-                    :ecdsa
-                  else
-                    :unrecognized
+                when '1'
+                  :rsa
+                when '17'
+                  :dsa
+                when '18'
+                  :ecc
+                when '19'
+                  :ecdsa
+                else
+                  :unrecognized
                 end
 
     fingerprint = fpr_split.last
@@ -95,7 +87,7 @@ register_provider('apt_key2') do
   def set(current_state, target_state, noop = false)
     target_state.each do |title, resource|
       logger.warning(title, 'The id should be a full fingerprint (40 characters) to avoid collision attacks, see the README for details.') if title.length < 40
-      if resource[:source] and resource[:content]
+      if resource[:source] && resource[:content]
         logger.fail(title, 'The properties content and source are mutually exclusive')
         next
       end
@@ -105,8 +97,8 @@ register_provider('apt_key2') do
         logger.deleting(title) do
           begin
             apt_key('del', resource[:short], noop: noop)
-            r = execute(["#{command(:apt_key)} list | grep '/#{resource[:short]}\s'"], :failonfail => false)
-          end while r.exitstatus == 0
+            r = execute(["#{command(:apt_key)} list | grep '/#{resource[:short]}\s'"], failonfail: false)
+          end while r.exitstatus.zero?
         end
       elsif current && resource[:ensure].to_s == 'present'
         logger.warning(title, 'No updating implemented')
@@ -119,7 +111,7 @@ register_provider('apt_key2') do
 
   def create(title, resource, noop = false)
     logger.creating(title) do |logger|
-      if resource[:source].nil? and resource[:content].nil?
+      if resource[:source].nil? && resource[:content].nil?
         # Breaking up the command like this is needed because it blows up
         # if --recv-keys isn't the last argument.
         args = ['adv', '--keyserver', resource[:server]]
@@ -151,11 +143,12 @@ register_provider('apt_key2') do
       file.close
       if name.size == 40
         if File.executable? command(:gpg)
-          extracted_key = execute(["#{command(:gpg)} --with-fingerprint --with-colons #{file.path} | awk -F: '/^fpr:/ { print $10 }'"], :failonfail => false)
+          extracted_key = execute(["#{command(:gpg)} --with-fingerprint --with-colons #{file.path} | awk -F: '/^fpr:/ { print $10 }'"], failonfail: false)
           extracted_key = extracted_key.chomp
 
-          unless extracted_key.match(/^#{name}$/)
-            logger.fail("The id in your manifest #{resource[:id]} and the fingerprint from content/source do not match. Please check there is not an error in the id or check the content/source is legitimate.")
+          unless extracted_key =~ %r{^#{name}$}
+            logger.fail("The id in your manifest #{resource[:id]} and the fingerprint from content/source do not match. "\
+              ' Please check there is not an error in the id or check the content/source is legitimate.')
           end
         else
           logger.warning('/usr/bin/gpg cannot be found for verification of the id.')
