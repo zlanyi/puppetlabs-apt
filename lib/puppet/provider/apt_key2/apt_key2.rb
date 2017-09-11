@@ -7,7 +7,7 @@ class Puppet::Provider::AptKey2::AptKey2
 
   def initialize
     @apt_key_cmd = Puppet::ResourceApi::Command.new 'apt-key'
-    @gpg_cmd = Puppet::ResourceApi::Command.new  '/usr/bin/gpg'
+    @gpg_cmd = Puppet::ResourceApi::Command.new '/usr/bin/gpg'
   end
 
   def canonicalize(resources)
@@ -20,35 +20,35 @@ class Puppet::Provider::AptKey2::AptKey2
     end
   end
 
-  def get(_names = [])
-    cli_args   = %w[adv --list-keys --with-colons --fingerprint --fixed-list-mode]
-    key_output = apt_key_lines(*cli_args)
+  def get(context)
     pub_line   = nil
     fpr_line   = nil
 
-    result = key_output.map { |line|
-      line = line.encode('UTF-8', 'binary', invalid: :replace, undef: :replace, replace: '')
-      if line.start_with?('pub')
-        pub_line = line
-      elsif line.start_with?('fpr')
-        fpr_line = line
-      end
-      # puts "debug: parsing #{line}; fpr: #{fpr_line.inspect}; pub: #{pub_line.inspect}"
+    result = @apt_key_cmd.start_read(context, %w[adv --list-keys --with-colons --fingerprint --fixed-list-mode]) do |handle|
+      handle.stdout.each_line.map { |line|
+        line = line.encode('UTF-8', 'binary', invalid: :replace, undef: :replace, replace: '')
+        if line.start_with?('pub')
+          pub_line = line
+        elsif line.start_with?('fpr')
+          fpr_line = line
+        end
+        # puts "debug: parsing #{line}; fpr: #{fpr_line.inspect}; pub: #{pub_line.inspect}"
 
-      next unless pub_line && fpr_line
+        next unless pub_line && fpr_line
 
-      # puts "debug: key_line_to_hash"
+        # puts "debug: key_line_to_hash"
 
-      hash = key_line_to_hash(pub_line, fpr_line)
+        hash = key_line_to_hash(pub_line, fpr_line)
 
-      # reset scanning
-      pub_line = nil
-      fpr_line = nil
+        # reset scanning
+        pub_line = nil
+        fpr_line = nil
 
-      hash
-    }.compact!
+        hash
+      }.compact!
 
-    result
+      result
+    end
   end
 
   def self.key_line_to_hash(pub_line, fpr_line)
