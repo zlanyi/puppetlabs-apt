@@ -41,3 +41,8 @@ RSpec.configure do |c|
   # Readable test descriptions
   c.formatter = :documentation
 end
+
+if ENV['BEAKER_provision'] == 'yes'
+  scp_to(hosts, '/home/david/git/puppet-resource_api/pkg/puppet-resource_api-0.1.0.gem', '/tmp/puppet-resource_api-0.1.0.gem')
+  on(hosts, '/opt/puppetlabs/puppet/bin/gem install /tmp/puppet-resource_api-0.1.0.gem')
+end
