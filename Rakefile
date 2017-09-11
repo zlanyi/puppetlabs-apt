@@ -35,3 +35,11 @@ task :gen_nodeset do
   end
   puts nodeset
 end
+
+namespace :spec do
+  desc 'Run RSpec code examples with coverage collection'
+  task :coverage do
+    ENV['COVERAGE'] = 'yes'
+    Rake::Task['spec'].execute
+  end
+end
