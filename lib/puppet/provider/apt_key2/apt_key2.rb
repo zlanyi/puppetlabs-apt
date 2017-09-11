@@ -1,12 +1,14 @@
-require File.expand_path(File.join(File.dirname(__FILE__), '..', '..', '..', 'puppet_x', 'apt_key', 'resource_api.rb'))
-
-require 'open-uri'
 require 'net/ftp'
+require 'open-uri'
+require 'puppet/resource_api'
 require 'tempfile'
 
-register_provider('apt_key2') do
-  commands apt_key: 'apt-key'
-  commands gpg: '/usr/bin/gpg'
+class Puppet::Provider::AptKey2::AptKey2
+
+  def initialize
+    @apt_key_cmd = Puppet::ResourceApi::Command.new 'apt-key'
+    @gpg_cmd = Puppet::ResourceApi::Command.new  '/usr/bin/gpg'
+  end
 
   def canonicalize(resources)
     resources.each do |r|

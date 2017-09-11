@@ -1,6 +1,7 @@
-require File.expand_path(File.join(File.dirname(__FILE__), '..', '..', 'puppet_x', 'apt_key', 'resource_api.rb'))
+require 'puppet/resource_api'
 
-register_type(name: 'apt_key2',
+Puppet::ResourceApi.register_type(
+  name: 'apt_key2',
   docs: <<-EOS,
       This type provides Puppet with the capabilities to manage GPG keys needed
       by apt to perform package validation. Apt has it's own GPG keyring that can
@@ -36,7 +37,7 @@ register_type(name: 'apt_key2',
     server:      {
       type:      'Pattern[/\A((hkp|http|https):\/\/)?([a-z\d])([a-z\d-]{0,61}\.)+[a-z\d]+(:\d{2,5})?$/]',
       docs:      'The key server to fetch the key from based on the ID. It can either be a domain name or url.',
-      behaviour: :read_only,
+      behaviour: :parameter,
       default:   :'keyserver.ubuntu.com',
     },
     options:     {
@@ -88,4 +89,6 @@ register_type(name: 'apt_key2',
   autorequires: {
     file:    '$source', # will evaluate to the value of the `source` attribute
     package: 'apt',
-  })
+  },
+  features: ['canonicalize'],
+)
