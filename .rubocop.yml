@@ -62,6 +62,8 @@ Style/TrailingCommaInLiteral:
 Style/SymbolArray:
   Description: Using percent style obscures symbolic intent of array's contents.
   EnforcedStyle: brackets
+Layout/EndOfLine:
+  Enabled: false
 Style/CollectionMethods:
   Enabled: true
 Style/MethodCalledOnDoEndBlock:
@@ -86,11 +88,21 @@ Metrics/PerceivedComplexity:
   Enabled: false
 RSpec/DescribeClass:
   Enabled: false
+RSpec/ExampleLength:
+  Enabled: false
 RSpec/MessageExpectation:
+  Enabled: false
+RSpec/MultipleExpectations:
+  Enabled: false
+RSpec/NestedGroups:
   Enabled: false
 Style/AsciiComments:
   Enabled: false
 Style/IfUnlessModifier:
   Enabled: false
 Style/SymbolProc:
+  Enabled: false
+
+# Interacting with external API makes message spies pretty useless
+RSpec/MessageSpies:
   Enabled: false
