@@ -6,8 +6,6 @@ run_puppet_install_helper
 install_module_on(hosts)
 install_module_dependencies_on(hosts)
 
-UNSUPPORTED_PLATFORMS = ['RedHat','Suse','windows','AIX','Solaris']
-
 # This method allows a block to be passed in and if an exception is raised
 # that matches the 'error_matcher' matcher, the block will wait a set number
 # of seconds before retrying.
