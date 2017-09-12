@@ -4,7 +4,6 @@ require 'puppet/resource_api'
 require 'tempfile'
 
 class Puppet::Provider::AptKey2::AptKey2
-
   def initialize
     @apt_key_cmd = Puppet::ResourceApi::Command.new 'apt-key'
     @gpg_cmd = Puppet::ResourceApi::Command.new '/usr/bin/gpg'
@@ -24,7 +23,7 @@ class Puppet::Provider::AptKey2::AptKey2
     pub_line   = nil
     fpr_line   = nil
 
-    result = @apt_key_cmd.start_read(context, *%w[adv --list-keys --with-colons --fingerprint --fixed-list-mode]) do |process|
+    @apt_key_cmd.start_read(context, 'adv', '--list-keys', '--with-colons', '--fingerprint', '--fixed-list-mode') do |process|
       process.io.stdout.each_line.map { |line|
         line = line.encode('UTF-8', 'binary', invalid: :replace, undef: :replace, replace: '').strip
         if line.start_with?('pub')
@@ -80,7 +79,7 @@ class Puppet::Provider::AptKey2::AptKey2
       type:        key_type,
       created:     Time.at(pub_split[5].to_i).to_s,
       expiry:      expiry.to_s,
-      expired:     !!(expiry && Time.now >= expiry),
+      expired:     (expiry && Time.now >= expiry) ? true : false,
     }
   end
 
