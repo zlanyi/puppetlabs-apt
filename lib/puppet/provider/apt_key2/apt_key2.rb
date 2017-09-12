@@ -24,9 +24,9 @@ class Puppet::Provider::AptKey2::AptKey2
     pub_line   = nil
     fpr_line   = nil
 
-    result = @apt_key_cmd.start_read(context, %w[adv --list-keys --with-colons --fingerprint --fixed-list-mode]) do |handle|
-      handle.stdout.each_line.map { |line|
-        line = line.encode('UTF-8', 'binary', invalid: :replace, undef: :replace, replace: '')
+    result = @apt_key_cmd.start_read(context, *%w[adv --list-keys --with-colons --fingerprint --fixed-list-mode]) do |process|
+      process.io.stdout.each_line.map { |line|
+        line = line.encode('UTF-8', 'binary', invalid: :replace, undef: :replace, replace: '').strip
         if line.start_with?('pub')
           pub_line = line
         elsif line.start_with?('fpr')
@@ -38,7 +38,7 @@ class Puppet::Provider::AptKey2::AptKey2
 
         # puts "debug: key_line_to_hash"
 
-        hash = key_line_to_hash(pub_line, fpr_line)
+        hash = self.class.key_line_to_hash(pub_line, fpr_line)
 
         # reset scanning
         pub_line = nil
@@ -46,8 +46,6 @@ class Puppet::Provider::AptKey2::AptKey2
 
         hash
       }.compact!
-
-      result
     end
   end
 
@@ -80,8 +78,8 @@ class Puppet::Provider::AptKey2::AptKey2
       short:       fingerprint[-8..-1], # last 8 characters of fingerprint
       size:        pub_split[2].to_i,
       type:        key_type,
-      created:     Time.at(pub_split[5].to_i),
-      expiry:      expiry,
+      created:     Time.at(pub_split[5].to_i).to_s,
+      expiry:      expiry.to_s,
       expired:     !!(expiry && Time.now >= expiry),
     }
   end
