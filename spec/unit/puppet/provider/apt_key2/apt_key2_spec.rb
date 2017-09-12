@@ -1,4 +1,4 @@
-require 'spec_helper_new'
+require 'spec_helper'
 
 # TODO: needs some cleanup/helper to avoid this misery
 module Puppet::Provider::AptKey2; end
