@@ -112,7 +112,7 @@ describe typename do
       end
     end
 
-    context 'absent, added with long key', :unless => (fact('operatingsystem') == 'Debian' and fact('operatingsystemmajrelease') == '6') do
+    context 'absent, added with long key' do
       it 'is removed' do
         pp = <<-EOS
         #{typename} { 'puppetlabs':
