@@ -3,6 +3,7 @@ require 'open-uri'
 require 'puppet/resource_api'
 require 'tempfile'
 
+# Implementation for the apt_key type using the Resource API.
 class Puppet::Provider::AptKey2::AptKey2
   def initialize
     @apt_key_cmd = Puppet::ResourceApi::Command.new 'apt-key'
@@ -19,33 +20,38 @@ class Puppet::Provider::AptKey2::AptKey2
     end
   end
 
-  def get(context)
+  def get(_context)
     pub_line   = nil
     fpr_line   = nil
 
-    @apt_key_cmd.start_read(context, 'adv', '--list-keys', '--with-colons', '--fingerprint', '--fixed-list-mode') do |process|
-      process.io.stdout.each_line.map { |line|
-        line = line.encode('UTF-8', 'binary', invalid: :replace, undef: :replace, replace: '').strip
-        if line.start_with?('pub')
-          pub_line = line
-        elsif line.start_with?('fpr')
-          fpr_line = line
-        end
-        # puts "debug: parsing #{line}; fpr: #{fpr_line.inspect}; pub: #{pub_line.inspect}"
+    # result = @apt_key_cmd.run(
+    #   context,
+    #   'adv', '--list-keys', '--with-colons', '--fingerprint', '--fixed-list-mode',
+    #   stdout_destination: :capture,
+    #   stderr_destination: :discard
+    # )
+    # lines = result.stdout
+    `apt-key adv --list-keys --with-colons --fingerprint --fixed-list-mode 2>/dev/null`.each_line.map { |line|
+      line = line.strip
+      if line.start_with?('pub')
+        pub_line = line
+      elsif line.start_with?('fpr')
+        fpr_line = line
+      end
+      # puts "debug: parsing #{line}; fpr: #{fpr_line.inspect}; pub: #{pub_line.inspect}"
 
-        next unless pub_line && fpr_line
+      next unless pub_line && fpr_line
 
-        # puts "debug: key_line_to_hash"
+      # puts "debug: key_line_to_hash"
 
-        hash = self.class.key_line_to_hash(pub_line, fpr_line)
+      hash = self.class.key_line_to_hash(pub_line, fpr_line)
 
-        # reset scanning
-        pub_line = nil
-        fpr_line = nil
+      # reset scanning
+      pub_line = nil
+      fpr_line = nil
 
-        hash
-      }.compact!
-    end
+      hash
+    }.compact!
   end
 
   def self.key_line_to_hash(pub_line, fpr_line)

@@ -7,7 +7,7 @@ require 'puppet/provider/apt_key2/apt_key2'
 RSpec.describe Puppet::Provider::AptKey2::AptKey2 do
   subject(:provider) { described_class.new }
 
-  let(:context) { instance_double('context') }
+  let(:context) { instance_double('Puppet::ResourceApi::BaseContext') }
 
   describe '#canonicalize(resources)' do
     it('works with empty inputs') { expect(provider.canonicalize([])).to eq [] }
@@ -80,9 +80,10 @@ EOS
       allow(process).to receive(:io).and_return(io)
     end
 
-    it 'processes input' do # rubocop:ignore RSpec/ExampleLength
-      expect(apt_key_cmd).to receive(:start_read).with(context, any_args).and_yield(process)
-      expect(io).to receive(:stdout).and_return(stdout)
+    it 'processes input' do
+      # expect(apt_key_cmd).to receive(:run).with(context, any_args).and_yield(process)
+      # expect(io).to receive(:stdout).and_return(stdout)
+      expect(provider).to receive(:`).with('apt-key adv --list-keys --with-colons --fingerprint --fixed-list-mode 2>/dev/null').and_return(stdout) # rubocop:disable RSpec/SubjectStub
       expect(provider.get(context)).to eq [
         { ensure: 'present',
           id: '126C0D24BD8A2942CC7DF8AC7638D0442B90D010',
