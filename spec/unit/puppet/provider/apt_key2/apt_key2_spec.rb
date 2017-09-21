@@ -108,4 +108,88 @@ EOS
       ]
     end
   end
+
+  describe '#set(context, changes)' do
+    let(:apt_key_cmd) { instance_double('Puppet::ResourceApi::Command') }
+    let(:process) { instance_double('ChildProcess::AbstractProcess') }
+    let(:io) { instance_double('ChildProcess::AbstractIO') }
+    let(:id) { 'A' * 40 }
+
+    before(:each) do
+      allow(Puppet::ResourceApi::Command).to receive(:new).and_return(apt_key_cmd)
+    end
+
+    context 'when passing in empty changes' do
+      it 'does nothing' do
+        expect { provider.set(context, {}) }.not_to raise_error
+      end
+    end
+
+    context 'when managing a up-to-date key' do
+      it 'does nothing' do
+        expect {
+          provider.set(context, id => {
+                         is: {
+                           id: id, ensure: :present
+                         },
+                         should: {
+                           id: id, ensure: :present
+                         },
+                       })
+        }.not_to raise_error
+      end
+    end
+
+    context 'when managing an absent key' do
+      it 'does nothing' do
+        provider.set(context, id =>
+        {
+          is: nil,
+          should: {
+            id: id,
+            ensure: :absent,
+          },
+        })
+      end
+    end
+
+    context 'when fetching a key from the keyserver' do
+      let(:creating_ctx) { instance_double('Puppet::ResourceApi::BaseContext', 'creating_ctx') }
+
+      it 'updates the system' do
+        expect(context).to receive(:creating).with(id).and_yield(creating_ctx)
+        expect(apt_key_cmd).to receive(:run).with(creating_ctx, 'adv', '--keyserver', 'keyserver.example.com', '--recv-keys', id, noop: false).and_return 0
+        provider.set(context, id =>
+        {
+          is: nil,
+          should: {
+            id: id,
+            ensure: :present,
+            server: :'keyserver.example.com',
+          },
+        })
+      end
+    end
+
+    context 'when deleting a key' do
+      let(:deleting_ctx) { instance_double('Puppet::ResourceApi::BaseContext', 'deleting_ctx') }
+
+      it 'updates the system' do
+        expect(context).to receive(:deleting).with(id).and_yield(deleting_ctx)
+        expect(apt_key_cmd).to receive(:run).with(deleting_ctx, 'del', id, noop: false).and_return 0
+        provider.set(context, id =>
+        {
+          is: {
+            id: id,
+            ensure: :present,
+            server: :'keyserver.ubuntu.com',
+          },
+          should: {
+            id: id,
+            ensure: :absent,
+          },
+        })
+      end
+    end
+  end
 end

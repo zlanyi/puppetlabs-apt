@@ -89,42 +89,55 @@ class Puppet::Provider::AptKey2::AptKey2
     }
   end
 
-  def set(current_state, target_state, noop = false)
-    target_state.each do |title, resource|
-      logger.warning(title, 'The id should be a full fingerprint (40 characters) to avoid collision attacks, see the README for details.') if title.length < 40
-      if resource[:source] && resource[:content]
-        logger.fail(title, 'The properties content and source are mutually exclusive')
-        next
-      end
+  def set(context, changes)
+    changes.each do |name, change|
+      is = change.key?(:is) ? change[:is] : get_single(name)
+      should = change[:should]
+      context.warning(name, 'The id should be a full fingerprint (40 characters) to avoid collision attacks, see the README for details.') if name.length < 40
 
-      current = current_state[title]
-      if current && resource[:ensure].to_s == 'absent'
-        logger.deleting(title) do
-          begin
-            apt_key('del', resource[:short], noop: noop)
-            r = execute(["#{command(:apt_key)} list | grep '/#{resource[:short]}\s'"], failonfail: false)
-          end while r.exitstatus.zero?
-        end
-      elsif current && resource[:ensure].to_s == 'present'
-        logger.warning(title, 'No updating implemented')
-        # update(key, noop: noop)
-      elsif !current && resource[:ensure].to_s == 'present'
-        create(title, resource, noop: noop)
+      is = { id: name, ensure: 'absent' } if is.nil?
+      should = { id: name, ensure: 'absent' } if should.nil?
+
+      if is[:ensure].to_s == 'absent' && should[:ensure].to_s == 'present'
+        create(context, name, should)
+      elsif is[:ensure].to_s == 'present' && should[:ensure].to_s == 'absent'
+        delete(context, name)
       end
     end
+    # target_state.each do |title, resource|
+    #   if resource[:source] && resource[:content]
+    #     logger.fail(title, 'The properties content and source are mutually exclusive')
+    #     next
+    #   end
+
+    #   current = current_state[title]
+    #   if current && resource[:ensure].to_s == 'absent'
+    #     logger.deleting(title) do
+    #       begin
+    #         apt_key('del', resource[:short], noop: noop)
+    #         r = execute(["#{command(:apt_key)} list | grep '/#{resource[:short]}\s'"], failonfail: false)
+    #       end while r.exitstatus.zero?
+    #     end
+    #   elsif current && resource[:ensure].to_s == 'present'
+    #     logger.warning(title, 'No updating implemented')
+    #     # update(key, noop: noop)
+    #   elsif !current && resource[:ensure].to_s == 'present'
+    #     create(title, resource, noop: noop)
+    #   end
+    # end
   end
 
-  def create(title, resource, noop = false)
-    logger.creating(title) do |logger|
+  def create(global_context, title, resource, noop = false)
+    global_context.creating(title) do |context|
       if resource[:source].nil? && resource[:content].nil?
         # Breaking up the command like this is needed because it blows up
         # if --recv-keys isn't the last argument.
-        args = ['adv', '--keyserver', resource[:server]]
+        args = ['adv', '--keyserver', resource[:server].to_s]
         if resource[:options]
           args.push('--keyserver-options', resource[:options])
         end
         args.push('--recv-keys', resource[:id])
-        apt_key(*args, noop: noop)
+        @apt_key_cmd.run(context, *args, noop: noop)
       elsif resource[:content]
         temp_key_file(resource[:content], logger) do |key_file|
           apt_key('add', key_file, noop: noop)
@@ -134,8 +147,14 @@ class Puppet::Provider::AptKey2::AptKey2
         apt_key('add', key_file.path, noop: noop)
         # In case we really screwed up, better safe than sorry.
       else
-        logger.fail("an unexpected condition occurred while trying to add the key: #{title} (content: #{resource[:content].inspect}, source: #{resource[:source].inspect})")
+        context.fail("an unexpected condition occurred while trying to add the key: #{title} (content: #{resource[:content].inspect}, source: #{resource[:source].inspect})")
       end
+    end
+  end
+
+  def delete(global_context, title, noop = false)
+    global_context.deleting(title) do |context|
+      @apt_key_cmd.run(context, 'del', title, noop: noop)
     end
   end
 
