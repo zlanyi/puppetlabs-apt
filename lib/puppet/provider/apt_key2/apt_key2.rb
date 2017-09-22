@@ -10,14 +10,31 @@ class Puppet::Provider::AptKey2::AptKey2
     @gpg_cmd = Puppet::ResourceApi::Command.new '/usr/bin/gpg'
   end
 
-  def canonicalize(resources)
+  def canonicalize(context, resources)
     resources.each do |r|
-      r[:id] = if r[:id].start_with?('0x')
-                 r[:id][2..-1].upcase
-               else
-                 r[:id].upcase
-               end
+      # require'pry';binding.pry
+      # puts "Canonicalizing: #{r.inspect}"
+      r[:name] ||= r[:id]
+      r[:name] = if r[:name].start_with?('0x')
+                   r[:name][2..-1].upcase
+                 else
+                   r[:name].upcase
+                 end
+
+      if r[:name].length != 40
+        context.warning(r[:name], 'The name should be a full fingerprint (40 characters) to avoid collision attacks, see the README for details.')
+        fingerprint = key_list_lines.select { |l| l.start_with?('fpr:') }
+                                    .map { |l| l.strip.split(':').last }
+                                    .find { |fp| fp.end_with? r[:name] }
+        r[:name] = fingerprint if fingerprint
+      end
+
+      r[:id] = r[:name]
     end
+  end
+
+  def key_list_lines
+    `apt-key adv --list-keys --with-colons --fingerprint --fixed-list-mode 2>/dev/null`.each_line
   end
 
   def get(_context)
@@ -31,7 +48,7 @@ class Puppet::Provider::AptKey2::AptKey2
     #   stderr_destination: :discard
     # )
     # lines = result.stdout
-    `apt-key adv --list-keys --with-colons --fingerprint --fixed-list-mode 2>/dev/null`.each_line.map { |line|
+    key_list_lines.map { |line|
       line = line.strip
       if line.start_with?('pub')
         pub_line = line
@@ -77,6 +94,7 @@ class Puppet::Provider::AptKey2::AptKey2
 
     {
       ensure:      'present',
+      name:        fingerprint,
       id:          fingerprint,
       fingerprint: fingerprint,
       long:        fingerprint[-16..-1], # last 16 characters of fingerprint
@@ -93,10 +111,9 @@ class Puppet::Provider::AptKey2::AptKey2
     changes.each do |name, change|
       is = change.key?(:is) ? change[:is] : get_single(name)
       should = change[:should]
-      context.warning(name, 'The id should be a full fingerprint (40 characters) to avoid collision attacks, see the README for details.') if name.length < 40
 
-      is = { id: name, ensure: 'absent' } if is.nil?
-      should = { id: name, ensure: 'absent' } if should.nil?
+      is = { name: name, ensure: 'absent' } if is.nil?
+      should = { name: name, ensure: 'absent' } if should.nil?
 
       if is[:ensure].to_s == 'absent' && should[:ensure].to_s == 'present'
         create(context, name, should)
@@ -127,27 +144,31 @@ class Puppet::Provider::AptKey2::AptKey2
     # end
   end
 
-  def create(global_context, title, resource, noop = false)
+  def create(global_context, title, should, noop = false)
     global_context.creating(title) do |context|
-      if resource[:source].nil? && resource[:content].nil?
+      if should[:source].nil? && should[:content].nil?
         # Breaking up the command like this is needed because it blows up
         # if --recv-keys isn't the last argument.
-        args = ['adv', '--keyserver', resource[:server].to_s]
-        if resource[:options]
-          args.push('--keyserver-options', resource[:options])
+        args = ['adv', '--keyserver', should[:server].to_s]
+        if should[:options]
+          args.push('--keyserver-options', should[:options])
         end
-        args.push('--recv-keys', resource[:id])
+        args.push('--recv-keys', should[:name])
         @apt_key_cmd.run(context, *args, noop: noop)
-      elsif resource[:content]
-        temp_key_file(resource[:content], logger) do |key_file|
-          apt_key('add', key_file, noop: noop)
+      elsif should[:content]
+        temp_key_file(context, title, should[:content]) do |key_file|
+          # @apt_key_cmd.run(context, 'add', key_file, noop: noop)
+          # require'pry';binding.pry
+          # puts key_file
+          # puts File.read(key_file).inspect
+          system("apt-key add #{key_file}")
         end
-      elsif resource[:source]
-        key_file = source_to_file(resource[:source])
+      elsif should[:source]
+        key_file = source_to_file(should[:source])
         apt_key('add', key_file.path, noop: noop)
         # In case we really screwed up, better safe than sorry.
       else
-        context.fail("an unexpected condition occurred while trying to add the key: #{title} (content: #{resource[:content].inspect}, source: #{resource[:source].inspect})")
+        context.fail("an unexpected condition occurred while trying to add the key: #{title} (content: #{should[:content].inspect}, source: #{should[:source].inspect})")
       end
     end
   end
@@ -160,22 +181,23 @@ class Puppet::Provider::AptKey2::AptKey2
 
   # This method writes out the specified contents to a temporary file and
   # confirms that the fingerprint from the file, matches the long key that is in the manifest
-  def temp_key_file(resource, logger)
+  def temp_key_file(context, title, content)
     file = Tempfile.new('apt_key')
     begin
-      file.write resource[:content]
+      file.write content
       file.close
-      if name.size == 40
-        if File.executable? command(:gpg)
-          extracted_key = execute(["#{command(:gpg)} --with-fingerprint --with-colons #{file.path} | awk -F: '/^fpr:/ { print $10 }'"], failonfail: false)
-          extracted_key = extracted_key.chomp
+      if title.size == 40
+        if File.executable? '/usr/bin/gpg'
+          extracted_key = `/usr/bin/gpg --with-fingerprint --with-colons #{file.path}`.each_line.find { |line| line =~ %r{^fpr:} }.split(':')[9]
 
-          unless extracted_key =~ %r{^#{name}$}
-            logger.fail("The id in your manifest #{resource[:id]} and the fingerprint from content/source do not match. "\
-              ' Please check there is not an error in the id or check the content/source is legitimate.')
+          if extracted_key =~ %r{^#{title}$}
+            context.debug('Fingerprint verified against extracted key')
+          else
+            raise ArgumentError, "The fingerprint in your manifest (#{title}) and the fingerprint from content/source (#{extracted_key}) do not match. "\
+              ' Please check there is not an error in the name or check the content/source is legitimate.'
           end
         else
-          logger.warning('/usr/bin/gpg cannot be found for verification of the id.')
+          context.warning('/usr/bin/gpg cannot be found for verification of the fingerprint.')
         end
       end
       yield file.path

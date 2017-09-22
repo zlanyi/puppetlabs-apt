@@ -18,71 +18,77 @@ Puppet::ResourceApi.register_type(
   attributes:   {
     ensure:      {
       type:    'Enum[present, absent]',
-      docs:    'Whether this apt key should be present or absent on the target system.',
+      desc:    'Whether this apt key should be present or absent on the target system.',
       default: 'present',
     },
-    id:          {
+    name:          {
       type:      'Variant[Pattern[/\A(0x)?[0-9a-fA-F]{8}\Z/], Pattern[/\A(0x)?[0-9a-fA-F]{16}\Z/], Pattern[/\A(0x)?[0-9a-fA-F]{40}\Z/]]',
-      docs:      'The ID of the key you want to manage.',
+      desc:      'The fingerprint of the key you want to manage.',
       behaviour: :namevar,
     },
     content:     {
       type: 'Optional[String]',
-      docs: 'The content of, or string representing, a GPG key.',
+      desc: 'The content of, or string representing, a GPG key.',
+      behaviour: :parameter,
     },
     source:      {
       type: 'Variant[Stdlib::Absolutepath, Pattern[/\A(https?|ftp):\/\//]]',
-      docs: 'Location of a GPG key file, /path/to/file, ftp://, http:// or https://',
+      desc: 'Location of a GPG key file, /path/to/file, ftp://, http:// or https://',
     },
     server:      {
       type:      'Pattern[/\A((hkp|http|https):\/\/)?([a-z\d])([a-z\d-]{0,61}\.)+[a-z\d]+(:\d{2,5})?$/]',
-      docs:      'The key server to fetch the key from based on the ID. It can either be a domain name or url.',
+      desc:      'The key server to fetch the key from based on the ID. It can either be a domain name or url.',
       behaviour: :parameter,
       default:   :'keyserver.ubuntu.com',
     },
     options:     {
       type: 'Optional[String]',
-      docs: 'Additional options to pass to apt-key\'s --keyserver-options.',
+      desc: 'Additional options to pass to apt-key\'s --keyserver-options.',
+    },
+    id: {
+      type:      'Pattern[/[a-f]{40}/]',
+      desc:      'The 40-digit hexadecimal fingerprint of the specified GPG key.',
+      behaviour: :read_only,
     },
     fingerprint: {
       type:      'Pattern[/[a-f]{40}/]',
-      docs:      'The 40-digit hexadecimal fingerprint of the specified GPG key.',
+      desc:      'The 40-digit hexadecimal fingerprint of the specified GPG key.',
       behaviour: :read_only,
     },
     long:        {
       type:      'Pattern[/[a-f]{16}/]',
-      docs:      'The 16-digit hexadecimal id of the specified GPG key.',
+      desc:      'The 16-digit hexadecimal id of the specified GPG key.',
       behaviour: :read_only,
     },
     short:       {
       type:      'Pattern[/[a-f]{8}/]',
-      docs:      'The 8-digit hexadecimal id of the specified GPG key.',
+      desc:      'The 8-digit hexadecimal id of the specified GPG key.',
       behaviour: :read_only,
     },
     expired:     {
       type:      'Boolean',
-      docs:      'Indicates if the key has expired.',
+      desc:      'Indicates if the key has expired.',
       behaviour: :read_only,
     },
     expiry:      {
       # TODO: should be DateTime
       type:      'String',
-      docs:      'The date the key will expire, or nil if it has no expiry date, in ISO format.',
+      desc:      'The date the key will expire, or nil if it has no expiry date, in ISO format.',
       behaviour: :read_only,
     },
     size:        {
       type:      'Integer',
-      docs:      'The key size, usually a multiple of 1024.',
+      desc:      'The key size, usually a multiple of 1024.',
       behaviour: :read_only,
     },
     type:        {
       type:      'String',
-      docs:      'The key type, one of: rsa, dsa, ecc, ecdsa.',
+      desc:      'The key type, one of: rsa, dsa, ecc, ecdsa.',
       behaviour: :read_only,
     },
     created:     {
       type:      'String',
-      docs:      'Date the key was created, in ISO format.',
+      desc:      'Date the key was created, in ISO format.',
       behaviour: :read_only,
     },
   },
