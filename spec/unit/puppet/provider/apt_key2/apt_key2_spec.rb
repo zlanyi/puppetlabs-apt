@@ -29,7 +29,7 @@ EOS
 
   describe '#canonicalize(resources)' do
     before(:each) do
-      allow(provider).to receive(:`).with('apt-key adv --list-keys --with-colons --fingerprint --fixed-list-mode 2>/dev/null').and_return(key_list)
+      allow(provider).to receive(:`).with('apt-key adv --list-keys --with-colons --fingerprint --fixed-list-mode 2>/dev/null').and_return(key_list) # rubocop:disable RSpec/SubjectStub
       allow(context).to receive(:warning)
     end
 
@@ -196,11 +196,11 @@ EOS
         allow(key_tempfile).to receive(:path).with(no_args).and_return('tempfilename')
         allow(key_tempfile).to receive(:close)
         expect(key_tempfile).to receive(:unlink)
-        expect(provider).to receive(:`).with('/usr/bin/gpg --with-fingerprint --with-colons tempfilename').and_return("\nfpr:::::::::#{fingerprint}:\n")
+        expect(provider).to receive(:`).with('/usr/bin/gpg --with-fingerprint --with-colons tempfilename').and_return("\nfpr:::::::::#{fingerprint}:\n") # rubocop:disable RSpec/SubjectStub
         expect(creating_ctx).to receive(:debug).with('Fingerprint verified against extracted key')
 
         # expect(apt_key_cmd).to receive(:run).with(creating_ctx, 'add', 'tempfilename', noop: false).and_return 0
-        expect(provider).to receive(:system).with('apt-key add tempfilename')
+        expect(provider).to receive(:system).with('apt-key add tempfilename') # rubocop:disable RSpec/SubjectStub
         provider.set(context, fingerprint =>
         {
           is: nil,

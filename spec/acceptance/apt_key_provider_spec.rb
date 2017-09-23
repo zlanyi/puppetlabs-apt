@@ -31,88 +31,74 @@ end
     fedora = {
       fingerprint: '128CF232A9371991C8A65695E08E7E629DB62FB1'.freeze,
       short: '9DB62FB1'.freeze,
+      long: 'E08E7E629DB62FB1'.freeze,
       content: my_fixture_read('fedora.txt').freeze,
     }.freeze
 
     after(:each) do
-      shell_ex("apt-key del #{fedora[:short]} > /dev/null")
       # Delete twice to make sure everything is cleaned
       # up after the short key collision
-      shell_ex("apt-key del #{fedora[:short]} > /dev/null")
+      shell_ex("apt-key del #{fedora[:fingerprint]} > /dev/null; apt-key del #{fedora[:fingerprint]} > /dev/null")
     end
 
-    # context 'with an already installed key' do
-    #   # run on :all hook to cooperate with `a puppet resource run` shared context
-    #   before(:all) do
-    #     # puts "apt-key add #{my_fixture('fedora.txt')}"
-    #     shell_ex("apt-key add #{my_fixture('fedora.txt')} >/dev/null 2>&1")
-    #   end
+    context 'with an already installed key' do
+      # run on :all hook to cooperate with `a puppet resource run` shared context
+      before(:all) do
+        # puts "apt-key add #{my_fixture('fedora.txt')}"
+        shell_ex("apt-key add #{my_fixture('fedora.txt')} >/dev/null 2>&1")
+      end
 
-    #   context 'when looked for using puppet resource' do
-    #     include_context 'a puppet resource run', typename, fedora[:fingerprint], trace: true
-    #     puppet_resource_should_show('ensure', 'present')
-    #     puppet_resource_should_show('fingerprint',fedora[:fingerprint])
-    #     puppet_resource_should_show('long', fedora[:fingerprint][-16..-1])
-    #     puppet_resource_should_show('short', fedora[:short])
-    #     # puppet_resource_should_show('created', '2017-08-14')
-    #     pending "Correctly calculate the created date"
-    #     puppet_resource_should_show('expired', 'false')
-    #     puppet_resource_should_show('size', '4096')
-    #     puppet_resource_should_show('type', ':?rsa')
-    #   end
-
-    # end
+      context 'when looked for using puppet resource' do
+        include_context 'a puppet resource run', typename, fedora[:fingerprint], trace: true
+        puppet_resource_should_show('ensure', 'present')
+        puppet_resource_should_show('fingerprint', fedora[:fingerprint])
+        puppet_resource_should_show('long', fedora[:fingerprint][-16..-1])
+        puppet_resource_should_show('short', fedora[:short])
+        # puppet_resource_should_show('created', '2017-08-14')
+        pending 'Correctly calculate the created date'
+        puppet_resource_should_show('expired', 'false')
+        puppet_resource_should_show('size', '4096')
+        puppet_resource_should_show('type', ':?rsa')
+      end
+    end
 
     describe 'default options' do
       key_versions = {
-        '32bit key id' => fedora[:short],
-        # '64bit key id'                        => PUPPETLABS_GPG_KEY_LONG_ID.to_s,
-        # '160bit key fingerprint'              => PUPPETLABS_GPG_KEY_FINGERPRINT.to_s,
-        # '32bit lowercase key id'              => PUPPETLABS_GPG_KEY_SHORT_ID.downcase.to_s,
-        # '64bit lowercase key id'              => PUPPETLABS_GPG_KEY_LONG_ID.downcase.to_s,
-        # '160bit lowercase key fingerprint'    => PUPPETLABS_GPG_KEY_FINGERPRINT.downcase.to_s,
-        # '0x formatted 32bit key id'           => "0x#{PUPPETLABS_GPG_KEY_SHORT_ID}",
-        # '0x formatted 64bit key id'           => "0x#{PUPPETLABS_GPG_KEY_LONG_ID}",
-        # '0x formatted 160bit key fingerprint' => "0x#{PUPPETLABS_GPG_KEY_FINGERPRINT}",
-        # '0x formatted 32bit lowercase key id' => "0x#{PUPPETLABS_GPG_KEY_SHORT_ID.downcase}",
-        # '0x formatted 64bit lowercase key id' => "0x#{PUPPETLABS_GPG_KEY_LONG_ID.downcase}",
-        # '0x formatted 160bit lowercase key fingerprint' => "0x#{PUPPETLABS_GPG_KEY_FINGERPRINT.downcase}",
+        '32bit key id'           => fedora[:short],
+        '64bit key id'           => fedora[:long],
+        '160bit key fingerprint' => fedora[:fingerprint],
       }
 
-      key_versions.each do |key, value|
-        context key.to_s do
-          it 'works' do
-            pp = <<-EOS
-              #{typename} { 'puppetlabs':
-                name    => '#{value}',
-                ensure  => 'present',
-                content => '#{fedora[:content]}',
-              }
-            EOS
+      key_versions.merge!(Hash[key_versions.map { |name, id| ["#{name}, lowercase", id.downcase] }])
+      key_versions.merge!(Hash[key_versions.map { |name, id| ["#{name}, 0x prefix", "0x#{id}"] }])
 
-            puts 'Add'
-            execute_manifest(pp, trace: true, catch_failures: true)
-            puts 'Check 1'
-            check_key(fedora[:short])
-            puts 'Ensure'
-            execute_manifest(pp, trace: true, catch_changes: true)
-            puts 'Check 2'
-            check_key(fedora[:short])
-          end
+      key_versions.each do |name, id|
+        it "works with #{name}: #{id}" do
+          pp = <<-EOS
+            #{typename} { 'test_key':
+              name    => '#{id}',
+              ensure  => 'present',
+              content => '#{fedora[:content]}',
+            }
+          EOS
+
+          execute_manifest(pp, trace: true, catch_failures: true)
+          check_key(fedora[:fingerprint])
+          execute_manifest(pp, trace: true, catch_changes: true)
+          check_key(fedora[:fingerprint])
         end
       end
 
-      context 'invalid length key id' do
-        it 'fails' do
+      context 'when specifying a key id with invalid length' do
+        it 'reports an error' do
           pp = <<-EOS
-        #{typename} { 'puppetlabs':
-          id => '8280EF8D349F',
-        }
-        EOS
+            #{typename} { 'puppetlabs':
+              id => '8280EF8D349F',
+            }
+          EOS
 
-          apply_manifest(pp, expect_failures: true) do |r|
-            expect(r.stderr).to match(%r{Valid values match})
-          end
+          result = execute_manifest(pp, expect_failures: true)
+          expect(result.stderr).to match(%r{Valid values match})
         end
       end
     end
