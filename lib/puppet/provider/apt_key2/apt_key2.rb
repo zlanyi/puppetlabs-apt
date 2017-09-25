@@ -24,7 +24,7 @@ class Puppet::Provider::AptKey2::AptKey2
       if r[:name].length != 40
         context.warning(r[:name], 'The name should be a full fingerprint (40 characters) to avoid collision attacks, see the README for details.')
         fingerprint = key_list_lines.select { |l| l.start_with?('fpr:') }
-                                    .map { |l| l.strip.split(':').last }
+                                    .map { |l| l.split(':').last }
                                     .find { |fp| fp.end_with? r[:name] }
         r[:name] = fingerprint if fingerprint
       end
@@ -34,7 +34,7 @@ class Puppet::Provider::AptKey2::AptKey2
   end
 
   def key_list_lines
-    `apt-key adv --list-keys --with-colons --fingerprint --fixed-list-mode 2>/dev/null`.each_line
+    `apt-key adv --list-keys --with-colons --fingerprint --fixed-list-mode 2>/dev/null`.each_line.map(&:strip)
   end
 
   def get(_context)
@@ -49,7 +49,6 @@ class Puppet::Provider::AptKey2::AptKey2
     # )
     # lines = result.stdout
     key_list_lines.map { |line|
-      line = line.strip
       if line.start_with?('pub')
         pub_line = line
       elsif line.start_with?('fpr')
