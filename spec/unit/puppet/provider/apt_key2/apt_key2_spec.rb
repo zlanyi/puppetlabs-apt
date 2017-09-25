@@ -107,8 +107,8 @@ EOS
           short: '8AE22BA9',
           size: 4096,
           type: :rsa,
-          created: '2017-05-22 19:41:53 +0100',
-          expiry: '2025-05-20 19:41:53 +0100',
+          created: '2017-05-22 18:41:53 UTC',
+          expiry: '2025-05-20 18:41:53 UTC',
           expired: false },
         { ensure: 'present',
           name: '126C0D24BD8A2942CC7DF8AC7638D0442B90D010',
@@ -118,8 +118,8 @@ EOS
           short: '2B90D010',
           size: 4096,
           type: :rsa,
-          created: '2014-11-21 21:01:13 +0000',
-          expiry: '2022-11-19 21:01:13 +0000',
+          created: '2014-11-21 21:01:13 UTC',
+          expiry: '2022-11-19 21:01:13 UTC',
           expired: false },
       ]
     end
