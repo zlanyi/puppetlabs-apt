@@ -7,7 +7,7 @@ require 'puppet/provider/apt_key2/apt_key2'
 RSpec.describe Puppet::Provider::AptKey2::AptKey2 do
   subject(:provider) { described_class.new }
 
-  let(:context) { instance_double('Puppet::ResourceApi::BaseContext') }
+  let(:context) { instance_double('Puppet::ResourceApi::BaseContext', 'context') }
   let(:key_list) do
     <<EOS
 Executing: /tmp/apt-key-gpghome.4VkaIao1Ca/gpg.1.sh --list-keys --with-colons --fingerprint --fixed-list-mode
@@ -170,11 +170,9 @@ EOS
     end
 
     context 'when fetching a key from the keyserver' do
-      let(:creating_ctx) { instance_double('Puppet::ResourceApi::BaseContext', 'creating_ctx') }
-
       it 'updates the system' do
-        expect(context).to receive(:creating).with(fingerprint).and_yield(creating_ctx)
-        expect(apt_key_cmd).to receive(:run).with(creating_ctx, 'adv', '--keyserver', 'keyserver.example.com', '--recv-keys', fingerprint, noop: false).and_return 0
+        expect(context).to receive(:creating).with(fingerprint).and_yield
+        expect(apt_key_cmd).to receive(:run).with(context, 'adv', '--keyserver', 'keyserver.example.com', '--recv-keys', fingerprint, noop: false).and_return 0
         provider.set(context, fingerprint =>
         {
           is: nil,
@@ -188,11 +186,10 @@ EOS
     end
 
     context 'when adding a key from a string' do
-      let(:creating_ctx) { instance_double('Puppet::ResourceApi::BaseContext', 'creating_ctx') }
       let(:key_tempfile) { instance_double('Tempfile') }
 
       it 'updates the system' do
-        expect(context).to receive(:creating).with(fingerprint).and_yield(creating_ctx)
+        expect(context).to receive(:creating).with(fingerprint).and_yield
         expect(Tempfile).to receive(:new).with('apt_key').and_return(key_tempfile)
         expect(key_tempfile).to receive(:write).with('public gpg key block')
         allow(key_tempfile).to receive(:path).with(no_args).and_return('tempfilename')
@@ -200,9 +197,9 @@ EOS
         expect(key_tempfile).to receive(:unlink)
         expect(File).to receive(:executable?).with('/usr/bin/gpg').and_return(true)
         expect(provider).to receive(:`).with('/usr/bin/gpg --with-fingerprint --with-colons tempfilename').and_return("\nfpr:::::::::#{fingerprint}:\n") # rubocop:disable RSpec/SubjectStub
-        expect(creating_ctx).to receive(:debug).with('Fingerprint verified against extracted key')
+        expect(context).to receive(:debug).with('Fingerprint verified against extracted key')
 
-        # expect(apt_key_cmd).to receive(:run).with(creating_ctx, 'add', 'tempfilename', noop: false).and_return 0
+        # expect(apt_key_cmd).to receive(:run).with(context, 'add', 'tempfilename', noop: false).and_return 0
         expect(provider).to receive(:system).with('apt-key add tempfilename') # rubocop:disable RSpec/SubjectStub
         provider.set(context, fingerprint =>
         {
@@ -217,11 +214,9 @@ EOS
     end
 
     context 'when deleting a key' do
-      let(:deleting_ctx) { instance_double('Puppet::ResourceApi::BaseContext', 'deleting_ctx') }
-
       it 'updates the system' do
-        expect(context).to receive(:deleting).with(fingerprint).and_yield(deleting_ctx)
-        expect(apt_key_cmd).to receive(:run).with(deleting_ctx, 'del', fingerprint, noop: false).and_return 0
+        expect(context).to receive(:deleting).with(fingerprint).and_yield
+        expect(apt_key_cmd).to receive(:run).with(context, 'del', fingerprint, noop: false).and_return 0
         provider.set(context, fingerprint =>
         {
           is: {

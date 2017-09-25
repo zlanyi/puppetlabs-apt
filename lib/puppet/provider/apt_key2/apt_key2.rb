@@ -145,8 +145,8 @@ class Puppet::Provider::AptKey2::AptKey2
     # end
   end
 
-  def create(global_context, title, should, noop = false)
-    global_context.creating(title) do |context|
+  def create(context, name, should, noop = false)
+    context.creating(name) do
       if should[:source].nil? && should[:content].nil?
         # Breaking up the command like this is needed because it blows up
         # if --recv-keys isn't the last argument.
@@ -157,7 +157,7 @@ class Puppet::Provider::AptKey2::AptKey2
         args.push('--recv-keys', should[:name])
         @apt_key_cmd.run(context, *args, noop: noop)
       elsif should[:content]
-        temp_key_file(context, title, should[:content]) do |key_file|
+        temp_key_file(context, name, should[:content]) do |key_file|
           # @apt_key_cmd.run(context, 'add', key_file, noop: noop)
           # require'pry';binding.pry
           # puts key_file
@@ -169,33 +169,33 @@ class Puppet::Provider::AptKey2::AptKey2
         apt_key('add', key_file.path, noop: noop)
         # In case we really screwed up, better safe than sorry.
       else
-        context.fail("an unexpected condition occurred while trying to add the key: #{title} (content: #{should[:content].inspect}, source: #{should[:source].inspect})")
+        context.fail("an unexpected condition occurred while trying to add the key: #{name} (content: #{should[:content].inspect}, source: #{should[:source].inspect})")
       end
     end
   end
 
-  def delete(global_context, title, noop = false)
-    global_context.deleting(title) do |context|
-      @apt_key_cmd.run(context, 'del', title, noop: noop)
+  def delete(context, name, noop = false)
+    context.deleting(name) do
+      @apt_key_cmd.run(context, 'del', name, noop: noop)
     end
   end
 
   # This method writes out the specified contents to a temporary file and
   # confirms that the fingerprint from the file, matches the long key that is in the manifest
-  def temp_key_file(context, title, content)
+  def temp_key_file(context, name, content)
     file = Tempfile.new('apt_key')
     begin
       file.write content
       file.close
       if File.executable? '/usr/bin/gpg'
-        extracted_keys = `/usr/bin/gpg --with-fingerprint --with-colons #{file.path}`.each_line.select { |line| line =~ %r{^fpr:} }.map { |fpr| fpr.split(':')[9] }
+        extracted_keys = `/usr/bin/gpg --with-fingerprint --with-colons #{file.path}`.each_line.select { |line| line =~ %r{^fpr:} }.map { |fpr| fpr.strip.split(':')[9] }
 
-        if extracted_keys.include? title
+        if extracted_keys.include? name
           context.debug('Fingerprint verified against extracted key')
-        elsif extracted_keys.any? { |k| k =~ %r{#{title}$} }
+        elsif extracted_keys.any? { |k| k =~ %r{#{name}$} }
           context.debug('Fingerprint matches the extracted key')
         else
-          raise ArgumentError, "The fingerprint in your manifest (#{title}) and the fingerprint from content/source (#{extracted_keys.inspect}) do not match. "\
+          raise ArgumentError, "The fingerprint in your manifest (#{name}) and the fingerprint from content/source (#{extracted_keys.inspect}) do not match. "\
             ' Please check there is not an error in the name or check the content/source is legitimate.'
         end
       else
