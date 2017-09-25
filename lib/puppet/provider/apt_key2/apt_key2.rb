@@ -91,7 +91,7 @@ class Puppet::Provider::AptKey2::AptKey2
                 end
 
     fingerprint = fpr_split.last
-    expiry      = pub_split[6].empty? ? nil : Time.at(pub_split[6].to_i)
+    expiry      = pub_split[6].empty? ? nil : Time.at(pub_split[6].to_i).utc
 
     {
       ensure:      'present',
@@ -102,7 +102,7 @@ class Puppet::Provider::AptKey2::AptKey2
       short:       fingerprint[-8..-1], # last 8 characters of fingerprint
       size:        pub_split[2].to_i,
       type:        key_type,
-      created:     Time.at(pub_split[5].to_i).to_s,
+      created:     Time.at(pub_split[5].to_i).utc.to_s,
       expiry:      expiry.to_s,
       expired:     (expiry && Time.now >= expiry) ? true : false,
     }
