@@ -21,7 +21,7 @@ Puppet::ResourceApi.register_type(
       desc:    'Whether this apt key should be present or absent on the target system.',
       default: 'present',
     },
-    name:          {
+    id:          {
       type:      'Variant[Pattern[/\A(0x)?[0-9a-fA-F]{8}\Z/], Pattern[/\A(0x)?[0-9a-fA-F]{16}\Z/], Pattern[/\A(0x)?[0-9a-fA-F]{40}\Z/]]',
       desc:      'The fingerprint of the key you want to manage.',
       behaviour: :namevar,
@@ -44,11 +44,6 @@ Puppet::ResourceApi.register_type(
     options:     {
       type: 'Optional[String]',
       desc: 'Additional options to pass to apt-key\'s --keyserver-options.',
-    },
-    id: {
-      type:      'Pattern[/[a-f]{40}/]',
-      desc:      'The 40-digit hexadecimal fingerprint of the specified GPG key.',
-      behaviour: :read_only,
     },
     fingerprint: {
       type:      'Pattern[/[a-f]{40}/]',
