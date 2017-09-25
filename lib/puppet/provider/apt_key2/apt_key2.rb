@@ -186,15 +186,14 @@ class Puppet::Provider::AptKey2::AptKey2
       file.write content
       file.close
       if File.executable? '/usr/bin/gpg'
-        extracted_key = `/usr/bin/gpg --with-fingerprint --with-colons #{file.path}`.each_line.find { |line| line =~ %r{^fpr:} }.split(':')[9]
+        extracted_keys = `/usr/bin/gpg --with-fingerprint --with-colons #{file.path}`.each_line.select { |line| line =~ %r{^fpr:} }.map { |fpr| fpr.split(':')[9] }
 
-        case extracted_key
-        when title
+        if extracted_keys.include? title
           context.debug('Fingerprint verified against extracted key')
-        when %r{#{title}$}
+        elsif extracted_keys.any? { |k| k =~ %r{#{title}$} }
           context.debug('Fingerprint matches the extracted key')
         else
-          raise ArgumentError, "The fingerprint in your manifest (#{title}) and the fingerprint from content/source (#{extracted_key}) do not match. "\
+          raise ArgumentError, "The fingerprint in your manifest (#{title}) and the fingerprint from content/source (#{extracted_keys.inspect}) do not match. "\
             ' Please check there is not an error in the name or check the content/source is legitimate.'
         end
       else
