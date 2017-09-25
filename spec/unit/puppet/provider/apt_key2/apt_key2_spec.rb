@@ -196,6 +196,7 @@ EOS
         allow(key_tempfile).to receive(:path).with(no_args).and_return('tempfilename')
         allow(key_tempfile).to receive(:close)
         expect(key_tempfile).to receive(:unlink)
+        expect(File).to receive(:executable?).with('/usr/bin/gpg').and_return(true)
         expect(provider).to receive(:`).with('/usr/bin/gpg --with-fingerprint --with-colons tempfilename').and_return("\nfpr:::::::::#{fingerprint}:\n") # rubocop:disable RSpec/SubjectStub
         expect(creating_ctx).to receive(:debug).with('Fingerprint verified against extracted key')
 

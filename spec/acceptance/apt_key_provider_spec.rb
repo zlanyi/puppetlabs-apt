@@ -26,6 +26,10 @@ def check_key(fingerprint)
   expect(shell_ex("apt-key adv --list-keys --with-colons --fingerprint | grep #{fingerprint}").exit_code).to eq 0
 end
 
+def check_key_absent(fingerprint)
+  expect(shell_ex("apt-key adv --list-keys --with-colons --fingerprint | grep #{fingerprint}").exit_code).not_to eq 0
+end
+
 %w[apt_key2 apt_key].each do |typename|
   describe typename do
     fedora = {
@@ -59,6 +63,21 @@ end
         puppet_resource_should_show('expired', 'false')
         puppet_resource_should_show('size', '4096')
         puppet_resource_should_show('type', ':?rsa')
+      end
+
+      it 'can be removed' do
+        pp = <<-EOS
+          #{typename} { 'fedora':
+            id     => '#{fedora[:fingerprint]}',
+            ensure => 'absent',
+          }
+        EOS
+
+        # Time to remove it using Puppet
+        execute_manifest(pp, trace: true, catch_failures: true)
+        check_key_absent(fedora[:fingerprint])
+        execute_manifest(pp, trace: true, catch_changes: true)
+        check_key_absent(fedora[:fingerprint])
       end
     end
 
@@ -103,115 +122,40 @@ end
       end
     end
 
-    describe 'ensure =>' do
-      context 'absent' do
-        it 'is removed' do
-          pp = <<-EOS
-        #{typename} { 'centos':
-          id     => '#{CENTOS_GPG_KEY_LONG_ID}',
-          ensure => 'absent',
-        }
-        EOS
-
-          # Install the key first (retry because key pool may timeout)
-          retry_on_error_matching(MAX_TIMEOUT_RETRY, TIMEOUT_RETRY_WAIT, TIMEOUT_ERROR_MATCHER) do
-            shell_ex("apt-key adv --keyserver hkps.pool.sks-keyservers.net \
-                --recv-keys #{CENTOS_GPG_KEY_FINGERPRINT}")
-          end
-          shell_ex(CENTOS_KEY_CHECK_COMMAND)
-
-          # Time to remove it using Puppet
-          apply_manifest(pp, catch_failures: true)
-          apply_manifest(pp, catch_changes: true)
-
-          shell_ex(CENTOS_KEY_CHECK_COMMAND,
-                   acceptable_exit_codes: [1])
-
-          # Re-Install the key (retry because key pool may timeout)
-          retry_on_error_matching(MAX_TIMEOUT_RETRY, TIMEOUT_RETRY_WAIT, TIMEOUT_ERROR_MATCHER) do
-            shell_ex("apt-key adv --keyserver hkps.pool.sks-keyservers.net \
-                  --recv-keys #{CENTOS_GPG_KEY_FINGERPRINT}")
-          end
-        end
-      end
-
-      context 'absent, added with long key' do
-        it 'is removed' do
-          pp = <<-EOS
-        #{typename} { 'puppetlabs':
-          id     => '#{PUPPETLABS_GPG_KEY_LONG_ID}',
-          ensure => 'absent',
-        }
-        EOS
-
-          # Install the key first (retry because key pool may timeout)
-          retry_on_error_matching(MAX_TIMEOUT_RETRY, TIMEOUT_RETRY_WAIT, TIMEOUT_ERROR_MATCHER) do
-            shell_ex("apt-key adv --keyserver hkps.pool.sks-keyservers.net \
-                  --recv-keys #{PUPPETLABS_GPG_KEY_LONG_ID}")
-          end
-
-          shell_ex(PUPPETLABS_KEY_CHECK_COMMAND)
-
-          # Time to remove it using Puppet
-          apply_manifest(pp, catch_failures: true)
-          apply_manifest(pp, catch_changes: true)
-
-          shell_ex(PUPPETLABS_KEY_CHECK_COMMAND,
-                   acceptable_exit_codes: [1])
-        end
-      end
-    end
-
-    describe 'content =>' do
-      context 'puppetlabs gpg key' do
-        it 'works' do
-          pp = <<-EOS
-          #{typename} { 'puppetlabs':
-            id      => '#{PUPPETLABS_GPG_KEY_FINGERPRINT}',
-            ensure  => 'present',
-            content => "#{my_fixture_read('puppetlabs_key.gpg')}",
-          }
-        EOS
-
-          # Apply the manifest (Retry if timeout error is received from key pool)
-          retry_on_error_matching(MAX_TIMEOUT_RETRY, TIMEOUT_RETRY_WAIT, TIMEOUT_ERROR_MATCHER) do
-            apply_manifest(pp, catch_failures: true)
-          end
-
-          apply_manifest(pp, catch_changes: true)
-          shell_ex(PUPPETLABS_KEY_CHECK_COMMAND)
-        end
-      end
-
+    fdescribe 'content =>' do
       context 'multiple keys' do
+        after(:each) do
+          shell_ex("apt-key del #{PUPPETLABS_GPG_KEY_FINGERPRINT} > /dev/null")
+        end
+
         it 'runs without errors' do
           pp = <<-EOS
-          #{typename} { 'puppetlabs':
-            id      => '#{PUPPETLABS_GPG_KEY_FINGERPRINT}',
-            ensure  => 'present',
-            content => "#{my_fixture_read('puppetlabs_multiple.gpg')}",
-          }
-        EOS
+            #{typename} { 'puppetlabs':
+              id      => '#{PUPPETLABS_GPG_KEY_FINGERPRINT}',
+              ensure  => 'present',
+              content => "#{my_fixture_read('puppetlabs_multiple.gpg')}",
+            }
+          EOS
 
-          apply_manifest(pp, catch_failures: true)
-          apply_manifest(pp, catch_changes: true)
-          shell_ex(PUPPETLABS_KEY_CHECK_COMMAND)
+          execute_manifest(pp, trace: true, catch_failures: true)
+          check_key(PUPPETLABS_GPG_KEY_FINGERPRINT)
+          execute_manifest(pp, trace: true, catch_changes: true)
+          check_key(PUPPETLABS_GPG_KEY_FINGERPRINT)
         end
       end
 
       context 'bogus key' do
         it 'fails' do
           pp = <<-EOS
-        #{typename} { 'puppetlabs':
-          id      => '#{PUPPETLABS_GPG_KEY_LONG_ID}',
-          ensure  => 'present',
-          content => 'For posterity: such content, much bogus, wow',
-        }
-        EOS
+            #{typename} { 'puppetlabs':
+              id      => '#{PUPPETLABS_GPG_KEY_LONG_ID}',
+              ensure  => 'present',
+              content => 'For posterity: such content, much bogus, wow',
+            }
+          EOS
 
-          apply_manifest(pp, expect_failures: true) do |r|
-            expect(r.stderr).to match(%r{no valid OpenPGP data found})
-          end
+          result = execute_manifest(pp, trace: true, expect_failures: true)
+          expect(result.stderr).to match(%r{no valid OpenPGP data found})
         end
       end
     end
