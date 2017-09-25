@@ -12,18 +12,20 @@ RSpec.describe Puppet::Provider::AptKey2::AptKey2 do
     <<EOS
 Executing: /tmp/apt-key-gpghome.4VkaIao1Ca/gpg.1.sh --list-keys --with-colons --fingerprint --fixed-list-mode
 tru:t:1:1505150630:0:3:1:5
+pub:-:4096:1:EDA0D2388AE22BA9:1495478513:1747766513::-:::scSC::::::23::0:
+rvk:::1::::::80E976F14A508A48E9CA3FE9BC372252CA1CF964:80:
+rvk:::1::::::FBFABDB541B5DC955BD9BA6EDB16CF5BB12525C4:80:
+rvk:::1::::::309911BEA966D0613053045711B4E5FF15B0FD82:80:
+fpr:::::::::6ED6F5CB5FA6FB2F460AE88EEDA0D2388AE22BA9:
+uid:-::::1495478513::4B4AF158B381AC576A482DF47825CC13569C98D5::Debian Security Archive Automatic Signing Key (9/stretch) <ftpmaster@debian.org>::::::::::0:
+sub:-:4096:1:AA8E81B4331F7F50:1495478513:1747766513:::::s::::::23:
+fpr:::::::::379483D8B60160B155B372DDAA8E81B4331F7F50:
 pub:-:4096:1:7638D0442B90D010:1416603673:1668891673::-:::scSC:::::::
 rvk:::1::::::309911BEA966D0613053045711B4E5FF15B0FD82:80:
 rvk:::1::::::FBFABDB541B5DC955BD9BA6EDB16CF5BB12525C4:80:
 rvk:::1::::::80E976F14A508A48E9CA3FE9BC372252CA1CF964:80:
 fpr:::::::::126C0D24BD8A2942CC7DF8AC7638D0442B90D010:
 uid:-::::1416603673::15C761B84F0C9C293316B30F007E34BE74546B48::Debian Archive Automatic Signing Key (8/jessie) <ftpmaster@debian.org>:
-pub:-:4096:1:9D6D8F6BC857C906:1416604417:1668892417::-:::scSC:::::::
-rvk:::1::::::FBFABDB541B5DC955BD9BA6EDB16CF5BB12525C4:80:
-rvk:::1::::::309911BEA966D0613053045711B4E5FF15B0FD82:80:
-rvk:::1::::::80E976F14A508A48E9CA3FE9BC372252CA1CF964:80:
-fpr:::::::::D21169141CECD440F2EB8DDA9D6D8F6BC857C906:
-uid:-::::1416604417::088FA6B00E33BCC6F6EB4DFEFAC591F9940E06F0::Debian Security Archive Automatic Signing Key (8/jessie) <ftpmaster@debian.org>:
 EOS
   end
 
@@ -98,6 +100,17 @@ EOS
       expect(provider).to receive(:`).with('apt-key adv --list-keys --with-colons --fingerprint --fixed-list-mode 2>/dev/null').and_return(stdout) # rubocop:disable RSpec/SubjectStub
       expect(provider.get(context)).to eq [
         { ensure: 'present',
+          name: '6ED6F5CB5FA6FB2F460AE88EEDA0D2388AE22BA9',
+          id: '6ED6F5CB5FA6FB2F460AE88EEDA0D2388AE22BA9',
+          fingerprint: '6ED6F5CB5FA6FB2F460AE88EEDA0D2388AE22BA9',
+          long: 'EDA0D2388AE22BA9',
+          short: '8AE22BA9',
+          size: 4096,
+          type: :rsa,
+          created: '2017-05-22 19:41:53 +0100',
+          expiry: '2025-05-20 19:41:53 +0100',
+          expired: false },
+        { ensure: 'present',
           name: '126C0D24BD8A2942CC7DF8AC7638D0442B90D010',
           id: '126C0D24BD8A2942CC7DF8AC7638D0442B90D010',
           fingerprint: '126C0D24BD8A2942CC7DF8AC7638D0442B90D010',
@@ -107,17 +120,6 @@ EOS
           type: :rsa,
           created: '2014-11-21 21:01:13 +0000',
           expiry: '2022-11-19 21:01:13 +0000',
-          expired: false },
-        { ensure: 'present',
-          name: 'D21169141CECD440F2EB8DDA9D6D8F6BC857C906',
-          id: 'D21169141CECD440F2EB8DDA9D6D8F6BC857C906',
-          fingerprint: 'D21169141CECD440F2EB8DDA9D6D8F6BC857C906',
-          long: '9D6D8F6BC857C906',
-          short: 'C857C906',
-          size: 4096,
-          type: :rsa,
-          created: '2014-11-21 21:13:37 +0000',
-          expiry: '2022-11-19 21:13:37 +0000',
           expired: false },
       ]
     end

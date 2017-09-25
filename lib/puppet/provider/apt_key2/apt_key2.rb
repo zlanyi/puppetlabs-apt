@@ -51,6 +51,8 @@ class Puppet::Provider::AptKey2::AptKey2
     key_list_lines.map { |line|
       if line.start_with?('pub')
         pub_line = line
+        # reset fpr_line, to skip any previous subkeys which were collected
+        fpr_line = nil
       elsif line.start_with?('fpr')
         fpr_line = line
       end
