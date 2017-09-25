@@ -58,26 +58,27 @@ end
         puppet_resource_should_show('fingerprint', fedora[:fingerprint])
         puppet_resource_should_show('long', fedora[:fingerprint][-16..-1])
         puppet_resource_should_show('short', fedora[:short])
-        # puppet_resource_should_show('created', '2017-08-14')
-        pending 'Correctly calculate the created date'
+        puppet_resource_should_show('created', '2017-08-14.*')
         puppet_resource_should_show('expired', 'false')
         puppet_resource_should_show('size', '4096')
         puppet_resource_should_show('type', ':?rsa')
       end
 
-      it 'can be removed' do
-        pp = <<-EOS
-          #{typename} { 'fedora':
-            id     => '#{fedora[:fingerprint]}',
-            ensure => 'absent',
-          }
-        EOS
+      context 'with ensure => absent set' do
+        it 'is removed' do
+          pp = <<-EOS
+            #{typename} { 'fedora':
+              id     => '#{fedora[:fingerprint]}',
+              ensure => 'absent',
+            }
+          EOS
 
-        # Time to remove it using Puppet
-        execute_manifest(pp, trace: true, catch_failures: true)
-        check_key_absent(fedora[:fingerprint])
-        execute_manifest(pp, trace: true, catch_changes: true)
-        check_key_absent(fedora[:fingerprint])
+          # Time to remove it using Puppet
+          execute_manifest(pp, trace: true, catch_failures: true)
+          check_key_absent(fedora[:fingerprint])
+          execute_manifest(pp, trace: true, catch_changes: true)
+          check_key_absent(fedora[:fingerprint])
+        end
       end
     end
 
@@ -122,7 +123,7 @@ end
       end
     end
 
-    fdescribe 'content =>' do
+    describe 'content =>' do
       context 'multiple keys' do
         after(:each) do
           shell_ex("apt-key del #{PUPPETLABS_GPG_KEY_FINGERPRINT} > /dev/null")
