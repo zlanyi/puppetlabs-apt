@@ -130,6 +130,7 @@ EOS
     let(:process) { instance_double('ChildProcess::AbstractProcess') }
     let(:io) { instance_double('ChildProcess::AbstractIO') }
     let(:fingerprint) { 'A' * 40 }
+    let(:short) { 'A' * 8 }
 
     before(:each) do
       allow(Puppet::ResourceApi::Command).to receive(:new).and_return(apt_key_cmd)
@@ -216,7 +217,7 @@ EOS
     context 'when deleting a key' do
       it 'updates the system' do
         expect(context).to receive(:deleting).with(fingerprint).and_yield
-        expect(apt_key_cmd).to receive(:run).with(context, 'del', fingerprint, noop: false).and_return 0
+        expect(apt_key_cmd).to receive(:run).with(context, 'del', short, noop: false).and_return 0
         provider.set(context, fingerprint =>
         {
           is: {
