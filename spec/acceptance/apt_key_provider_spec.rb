@@ -42,7 +42,7 @@ end
     after(:each) do
       # Delete twice to make sure everything is cleaned
       # up after the short key collision
-      shell_ex("apt-key del #{fedora[:fingerprint]} > /dev/null; apt-key del #{fedora[:fingerprint]} > /dev/null")
+      shell_ex("apt-key del #{fedora[:short]} > /dev/null; apt-key del #{fedora[:short]} > /dev/null")
     end
 
     context 'with an already installed key' do
