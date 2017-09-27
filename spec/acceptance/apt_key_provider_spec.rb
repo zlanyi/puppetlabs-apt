@@ -162,76 +162,52 @@ end
     end
 
     describe 'server =>' do
-      context 'hkps.pool.sks-keyservers.net' do
-        it 'works' do
-          pp = <<-EOS
-        #{typename} { 'puppetlabs':
-          id     => '#{PUPPETLABS_GPG_KEY_LONG_ID}',
-          ensure => 'present',
-          server => 'hkps.pool.sks-keyservers.net',
-        }
+      let(:pp_template) do
+        <<-EOS
+          #{typename} { 'puppetlabs':
+            id     => '#{PUPPETLABS_GPG_KEY_FINGERPRINT}',
+            ensure => 'present',
+            server => '%{server}',
+          }
         EOS
+      end
+
+      before(:each) do
+        shell_ex("apt-key del #{PUPPETLABS_GPG_KEY_SHORT_ID} > /dev/null")
+      end
+
+      after(:each) do
+        shell_ex("apt-key del #{PUPPETLABS_GPG_KEY_SHORT_ID} > /dev/null")
+      end
+
+      def self.it_retrieves_the_key_from(server)
+        it "retrieves the key from '#{server}'" do
+          pp = pp_template % { server: server }
 
           # Apply the manifest (Retry if timeout error is received from key pool)
           retry_on_error_matching(MAX_TIMEOUT_RETRY, TIMEOUT_RETRY_WAIT, TIMEOUT_ERROR_MATCHER) do
-            apply_manifest(pp, catch_failures: true)
+            execute_manifest(pp, trace: true, catch_failures: true)
           end
 
-          apply_manifest(pp, catch_changes: true)
-          shell_ex(PUPPETLABS_KEY_CHECK_COMMAND)
+          execute_manifest(pp, trace: true, catch_changes: true)
+          check_key(PUPPETLABS_GPG_KEY_FINGERPRINT)
         end
       end
 
-      context 'hkp://hkps.pool.sks-keyservers.net:80' do
-        it 'works' do
-          pp = <<-EOS
-        #{typename} { 'puppetlabs':
-          id     => '#{PUPPETLABS_GPG_KEY_FINGERPRINT}',
-          ensure => 'present',
-          server => 'hkp://hkps.pool.sks-keyservers.net:80',
-        }
-        EOS
+      it_retrieves_the_key_from 'hkps.pool.sks-keyservers.net'
+      it_retrieves_the_key_from 'hkp://hkps.pool.sks-keyservers.net:80'
 
-          retry_on_error_matching(MAX_TIMEOUT_RETRY, TIMEOUT_RETRY_WAIT, TIMEOUT_ERROR_MATCHER) do
-            apply_manifest(pp, catch_failures: true)
-          end
+      def self.it_returns_a_failure_for(server)
+        it "returns a failure for '#{server}'" do
+          pp = pp_template % { server: server }
 
-          apply_manifest(pp, catch_changes: true)
-          shell_ex(PUPPETLABS_KEY_CHECK_COMMAND)
+          result = execute_manifest(pp, trace: false, expect_failures: true)
+          expect(result.stderr).to match(%r{(Host not found|Couldn't resolve host|keyserver receive failed: No name|Invalid value)})
         end
       end
 
-      context 'nonexistant.key.server' do
-        it 'fails' do
-          pp = <<-EOS
-        #{typename} { 'puppetlabs':
-          id     => '#{PUPPETLABS_GPG_KEY_LONG_ID}',
-          ensure => 'present',
-          server => 'nonexistant.key.server',
-        }
-        EOS
-
-          apply_manifest(pp, expect_failures: true) do |r|
-            expect(r.stderr).to match(%r{(Host not found|Couldn't resolve host)})
-          end
-        end
-      end
-
-      context 'key server start with dot' do
-        it 'fails' do
-          pp = <<-EOS
-        #{typename} { 'puppetlabs':
-          id     => '#{PUPPETLABS_GPG_KEY_LONG_ID}',
-          ensure => 'present',
-          server => '.pgp.key.server',
-        }
-        EOS
-
-          apply_manifest(pp, expect_failures: true) do |r|
-            expect(r.stderr).to match(%r{Invalid value \".pgp.key.server\"})
-          end
-        end
-      end
+      it_returns_a_failure_for 'nonexistant.key.server'
+      it_returns_a_failure_for '.pgp.key.server'
     end
 
     describe 'source =>' do
