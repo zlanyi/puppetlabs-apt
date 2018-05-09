@@ -46,11 +46,12 @@ class apt::params {
   }
 
   $proxy_defaults = {
-    'ensure' => undef,
-    'host'   => undef,
-    'port'   => 8080,
-    'https'  => false,
-    'direct' => false,
+    'ensure'    => undef,
+    'host'      => undef,
+    'port'      => 8080,
+    'https'     => false,
+    'direct'    => false,
+    'repo_host' => undef,
   }
 
   $purge_defaults = {
