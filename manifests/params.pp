@@ -12,7 +12,7 @@ class apt::params {
   $conf_d         = "${root}/apt.conf.d"
   $preferences    = "${root}/preferences"
   $preferences_d  = "${root}/preferences.d"
-  $keyserver      = 'keyserver.ubuntu.com'
+  $keyserver      = 'hkps://keyserver.ubuntu.com'
   $confs          = {}
   $update         = {}
   $purge          = {}
@@ -46,11 +46,12 @@ class apt::params {
   }
 
   $proxy_defaults = {
-    'ensure' => undef,
-    'host'   => undef,
-    'port'   => 8080,
-    'https'  => false,
-    'direct' => false,
+    'ensure'    => undef,
+    'host'      => undef,
+    'port'      => 8080,
+    'https'     => false,
+    'direct'    => false,
+    'repo_host' => undef,
   }
 
   $purge_defaults = {
