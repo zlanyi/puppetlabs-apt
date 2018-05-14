@@ -12,7 +12,7 @@ class apt::params {
   $conf_d         = "${root}/apt.conf.d"
   $preferences    = "${root}/preferences"
   $preferences_d  = "${root}/preferences.d"
-  $keyserver      = 'keyserver.ubuntu.com'
+  $keyserver      = 'hkps://keyserver.ubuntu.com'
   $confs          = {}
   $update         = {}
   $purge          = {}
