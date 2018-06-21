@@ -446,30 +446,29 @@ socket_error_pp = <<-MANIFEST
         }
   MANIFEST
 
-# FTP Not working on Travis-CI
-# ftp_works_pp = <<-MANIFEST
-#         apt_key { 'CentOS 6':
-#           id     => '#{CENTOS_GPG_KEY_LONG_ID}',
-#           ensure => 'present',
-#           source => 'ftp://#{CENTOS_REPO_URL}/#{CENTOS_GPG_KEY_FILE}',
-#         }
-#   MANIFEST
+ ftp_works_pp = <<-MANIFEST
+         apt_key { 'CentOS 6':
+           id     => '#{CENTOS_GPG_KEY_LONG_ID}',
+           ensure => 'present',
+           source => 'ftp://#{CENTOS_REPO_URL}/#{CENTOS_GPG_KEY_FILE}',
+         }
+   MANIFEST
 
-# ftp_550_pp = <<-MANIFEST
-#         apt_key { 'CentOS 6':
-#           id     => '#{SHOULD_NEVER_EXIST_ID}',
-#           ensure => 'present',
-#           source => 'ftp://#{CENTOS_REPO_URL}/herpderp.gpg',
-#         }
-#   MANIFEST
+ ftp_550_pp = <<-MANIFEST
+         apt_key { 'CentOS 6':
+           id     => '#{SHOULD_NEVER_EXIST_ID}',
+           ensure => 'present',
+           source => 'ftp://#{CENTOS_REPO_URL}/herpderp.gpg',
+         }
+   MANIFEST
 
-# ftp_socket_error_pp = <<-MANIFEST
-#         apt_key { 'puppetlabs':
-#           id     => '#{PUPPETLABS_GPG_KEY_LONG_ID}',
-#           ensure => 'present',
-#           source => 'ftp://apt.puppetlabss.com/herpderp.gpg',
-#         }
-#   MANIFEST
+ ftp_socket_error_pp = <<-MANIFEST
+         apt_key { 'puppetlabs':
+           id     => '#{PUPPETLABS_GPG_KEY_LONG_ID}',
+           ensure => 'present',
+           source => 'ftp://apt.puppetlabss.com/herpderp.gpg',
+         }
+   MANIFEST
 
 https_works_pp = <<-MANIFEST
         apt_key { 'puppetlabs':
