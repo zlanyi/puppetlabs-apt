@@ -9,7 +9,7 @@ before_install:
   - gem update --system
   - gem --version
   - bundle -v
-  - rvm @global do gem install bundler
+#  - rvm @global do gem install bundler
 script:
   - 'bundle exec rake $CHECK'
 bundler_args: --without system_tests
